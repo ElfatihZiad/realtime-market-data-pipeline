@@ -38,14 +38,14 @@ Please check each tab's screenshot:
 
 **Tab 1:**
 
-<img src="https://github.com/ElfatihZiad/realtime-market-data-pipeline/blob/master/images/tab1.gif" width="800" />
+<img src="https://github.com/ElfatihZiad/realtime-market-data-pipeline/blob/main/images/tab1.gif" width="800" />
 
 
 **Tab 2:**
 
-<img src="https://github.com/ElfatihZiad/realtime-market-data-pipeline/blob/master/images/tab2.gif" width="800" />
+<img src="https://github.com/ElfatihZiad/realtime-market-data-pipeline/blob/main/images/tab2.gif" width="800" />
 
 
 **Tab 3:**
 
-<img src="https://github.com/ElfatihZiad/realtime-market-data-pipeline/blob/master/images/tab3.gif" width="800" />
+<img src="https://github.com/ElfatihZiad/realtime-market-data-pipeline/blob/main/images/tab3.gif" width="800" />
