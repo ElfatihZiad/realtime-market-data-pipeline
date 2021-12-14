@@ -27,7 +27,7 @@ There are currently 3 tabs in the webpage:
 
 Here is the architecture of the platform.
 
-<img src="https://github.com/ElfatihZiad/realtime-market-data-pipeline/blob/master/images/pipeline.png" width="900" />
+<img src="https://github.com/ElfatihZiad/realtime-market-data-pipeline/blob/main/images/pipeline.png?raw=true" width="900" />
 
 How Stock Data is Streamed via Kafka to Cassandra:
 
