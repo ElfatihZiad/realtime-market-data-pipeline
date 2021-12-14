@@ -25,27 +25,27 @@ There are currently 3 tabs in the webpage:
 &nbsp;
 
 
-Here is the architecture of the platform. Note: the link in the image below is ***no longer available***.
+Here is the architecture of the platform.
 
-<img src="https://github.com/ElfatihZiad/stock_data_pipeline/blob/master/images/pipeline.png" width="900" />
+<img src="https://github.com/ElfatihZiad/realtime-market-data-pipeline/blob/master/images/pipeline.png" width="900" />
 
 How Stock Data is Streamed via Kafka to Cassandra:
 
-<img src="https://github.com/ElfatihZiad/stock_data_pipeline/blob/master/images/data_streaming.png" width="900" />
+<img src="https://github.com/ElfatihZiad/realtime-market-data-pipeline/blob/master/images/data_streaming.png" width="900" />
 
 Please check each tab's screenshot:
 
 
 **Tab 1:**
 
-<img src="https://github.com/ElfatihZiad/stock_data_pipeline/blob/master/images/tab1.gif" width="800" />
+<img src="https://github.com/ElfatihZiad/realtime-market-data-pipeline/blob/master/images/tab1.gif" width="800" />
 
 
 **Tab 2:**
 
-<img src="https://github.com/ElfatihZiad/stock_data_pipeline/blob/master/images/tab2.gif" width="800" />
+<img src="https://github.com/ElfatihZiad/realtime-market-data-pipeline/blob/master/images/tab2.gif" width="800" />
 
 
 **Tab 3:**
 
-<img src="https://github.com/ElfatihZiad/stock_data_pipeline/blob/master/images/tab3.gif" width="800" />
+<img src="https://github.com/ElfatihZiad/realtime-market-data-pipeline/blob/master/images/tab3.gif" width="800" />
