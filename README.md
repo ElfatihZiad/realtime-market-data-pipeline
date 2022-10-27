@@ -30,10 +30,6 @@ Here is the architecture of the platform.
 
 <img src="https://github.com/ElfatihZiad/realtime-market-data-pipeline/blob/main/images/pipeline.png?raw=true" width="900" />
 
-How Stock Data is Streamed via Kafka to Cassandra:
-
-<img src="https://github.com/ElfatihZiad/realtime-market-data-pipeline/blob/main/images/data_streaming.png" width="900" />
-
 Please check each tab's screenshot:
 
 
