@@ -1,5 +1,4 @@
-# Realtime Financial Market Data Visualization and Analysis
-
+# A real-time financial data streaming pipeline and visualization platform
 
 # Introduction
 
