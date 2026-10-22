@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Sync workspace
+        run: uv sync --all-packages
+
+      # Generated contract code is gitignored; it is regenerated from
+      # contracts/ so the committed .proto stays the single source of truth.
+      - name: Generate contract code
+        run: |
+          mkdir -p libs/mdp_core/src/mdp_core/gen
+          uv run python -m grpc_tools.protoc \
+            -I contracts \
+            --python_out=libs/mdp_core/src/mdp_core/gen \
+            --pyi_out=libs/mdp_core/src/mdp_core/gen \
+            contracts/market/v1/tick.proto
+          find libs/mdp_core/src/mdp_core/gen -type d -exec touch {}/__init__.py \;
+
+      - name: Lint
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+
+      - name: Type check
+        run: uv run mypy libs services
+
+      - name: Test
+        run: uv run pytest -q
+
+  # Phase 4 adds a second job here: integration tests against real Kafka and
+  # ClickHouse via testcontainers.
