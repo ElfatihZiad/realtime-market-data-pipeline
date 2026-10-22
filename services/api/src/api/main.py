@@ -61,8 +61,20 @@ def get_bars(
 ) -> list[dict[str, Any]]:
     bars = store.bars_1m(store.get_client(), instrument_id, minutes)
     if not bars:
-        raise HTTPException(404, f"no bars for {instrument_id} in the last {minutes}m")
+        raise HTTPException(
+            404,
+            f"no closed bars for {instrument_id} in the last {minutes}m — "
+            "is the Flink job running? (just stream)",
+        )
     return bars
+
+
+@app.get("/api/signals")
+def get_signals(
+    instrument_id: str = Query(min_length=1, max_length=32),
+    minutes: int = Query(default=240, ge=1, le=10_080),
+) -> list[dict[str, Any]]:
+    return store.signals(store.get_client(), instrument_id, minutes)
 
 
 @app.get("/api/ticks")

@@ -16,8 +16,6 @@ dev = [
     "pytest-asyncio>=0.24",
     "ruff>=0.8",
     "mypy>=1.13",
-    "grpcio-tools>=1.68",
-    "types-protobuf>=5.28",
 ]
 
 [tool.ruff]
@@ -34,7 +32,7 @@ strict = true
 exclude = ["legacy/", ".*/gen/.*"]
 
 [[tool.mypy.overrides]]
-module = ["confluent_kafka.*", "mdp_core.gen.*", "clickhouse_connect.*"]
+module = ["confluent_kafka.*", "clickhouse_connect.*"]
 ignore_missing_imports = true
 follow_imports = "skip"
 

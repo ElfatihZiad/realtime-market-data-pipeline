@@ -6,9 +6,10 @@ requires-python = ">=3.13"
 dependencies = [
     "mdp-core",
     "websockets>=14.1",
-    "confluent-kafka>=2.6",
+    "confluent-kafka[avro,schemaregistry]>=2.6",
     "prometheus-client>=0.21",
     "structlog>=24.4",
+    "clickhouse-connect>=0.8",
 ]
 
 [build-system]

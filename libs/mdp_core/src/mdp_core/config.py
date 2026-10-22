@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     kafka_bootstrap: str = "localhost:19092"
     ticks_topic: str = "ticks.raw"
     ticks_dlq_topic: str = "ticks.dlq"
+    ticks_late_topic: str = "ticks.late"
+    bars_topic: str = "bars.1m"
+    schema_registry_url: str = "http://localhost:18081"
 
     # ClickHouse
     clickhouse_host: str = "localhost"

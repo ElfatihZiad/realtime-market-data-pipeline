@@ -33,13 +33,20 @@ def instruments(client: Client) -> list[str]:
 
 
 def bars_1m(client: Client, instrument_id: str, minutes: int) -> list[dict[str, Any]]:
+    """Bars as Flink closed them on event time.
+
+    Phase 1 served market.bars_1m_live, which re-aggregated stored ticks on
+    every request, so a bar could still change long after its minute ended.
+    These are emitted once, when the watermark passed the window.
+    """
     result = client.query(
         """
-        SELECT bucket, open, high, low, close, volume, vwap, trades
-        FROM market.bars_1m_live
+        SELECT window_start, open, high, low, close, volume, vwap, trades
+        FROM market.bars
         WHERE instrument_id = {instrument_id:String}
-          AND bucket >= now() - toIntervalMinute({minutes:UInt32})
-        ORDER BY bucket
+          AND bar_interval = '1m'
+          AND window_start >= now() - toIntervalMinute({minutes:UInt32})
+        ORDER BY window_start
         """,
         parameters={"instrument_id": instrument_id, "minutes": minutes},
     )
@@ -55,6 +62,30 @@ def bars_1m(client: Client, instrument_id: str, minutes: int) -> list[dict[str, 
             "trades": row[7],
         }
         for row in result.result_rows
+    ]
+
+
+def signals(client: Client, instrument_id: str, minutes: int) -> list[dict[str, Any]]:
+    result = client.query(
+        """
+        SELECT bar_end, close, log_return, realized_vol, zscore, is_spike
+        FROM market.signals
+        WHERE instrument_id = {instrument_id:String}
+          AND bar_end >= now() - toIntervalMinute({minutes:UInt32})
+        ORDER BY bar_end
+        """,
+        parameters={"instrument_id": instrument_id, "minutes": minutes},
+    )
+    return [
+        {
+            "bar_end": r[0].isoformat(),
+            "close": r[1],
+            "log_return": r[2],
+            "realized_vol": r[3],
+            "zscore": r[4],
+            "is_spike": bool(r[5]),
+        }
+        for r in result.result_rows
     ]
 
 
@@ -115,6 +146,13 @@ def pipeline_stats(client: Client) -> dict[str, Any]:
         return {"ticks": 0, "instruments": 0, "dlq": 0}
     r = row[0]
     dlq = client.query("SELECT count() FROM market.ticks_errors").result_rows[0][0]
+    bars = client.query("SELECT count() FROM market.bars WHERE bar_interval = '1m'").result_rows[0][
+        0
+    ]
+    late = client.query(
+        "SELECT count(), coalesce(max(lateness_ms), 0) FROM market.ticks_late"
+    ).result_rows[0]
+    spikes = client.query("SELECT countIf(is_spike) FROM market.signals").result_rows[0][0]
     return {
         "ticks": r[0],
         "instruments": r[1],
@@ -123,4 +161,8 @@ def pipeline_stats(client: Client) -> dict[str, Any]:
         "latest_event": r[4].isoformat() if r[4] else None,
         "ticks_last_minute": r[5],
         "dlq": dlq,
+        "bars": bars,
+        "late_trades": late[0],
+        "max_lateness_ms": late[1],
+        "spikes": spikes,
     }

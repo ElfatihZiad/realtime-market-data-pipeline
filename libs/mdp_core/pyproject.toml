@@ -4,7 +4,6 @@ version = "0.2.0"
 description = "Shared config, contracts and clients for the market data pipeline"
 requires-python = ">=3.13"
 dependencies = [
-    "protobuf>=5.28",
     "pydantic>=2.9",
     "pydantic-settings>=2.6",
     "structlog>=24.4",
