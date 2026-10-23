@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "--package", "api", "uvicorn", "api.main:app", "--port", "8000"],
+      "port": 8000
+    }
+  ]
+}
