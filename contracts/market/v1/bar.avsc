@@ -1,0 +1,19 @@
+{
+  "type": "record",
+  "name": "Bar",
+  "namespace": "market.v1",
+  "doc": "An OHLCV bar over a tumbling event-time window, produced by Flink. Window bounds are epoch milliseconds UTC. A bar is emitted when the watermark passes window_end, so it is complete with respect to the watermark, not with respect to wall clock. Trades arriving after that are late and are routed to ticks.late instead of silently mutating this bar.",
+  "fields": [
+    {"name": "instrument_id", "type": "string"},
+    {"name": "bar_interval", "type": "string", "doc": "1m or 5m."},
+    {"name": "window_start_ms", "type": "long"},
+    {"name": "window_end_ms", "type": "long"},
+    {"name": "open", "type": "double"},
+    {"name": "high", "type": "double"},
+    {"name": "low", "type": "double"},
+    {"name": "close", "type": "double"},
+    {"name": "volume", "type": "double"},
+    {"name": "vwap", "type": "double", "doc": "sum(price*size)/sum(size) over the window."},
+    {"name": "trades", "type": "long"}
+  ]
+}
