@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Market Data Pipeline</title>
+<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+  :root {
+    --bg: #0b0e14; --panel: #121722; --line: #1f2733;
+    --fg: #e6edf3; --muted: #8b98a9; --up: #26a69a; --down: #ef5350; --accent: #58a6ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 14px/1.5 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--panel);
+  }
+  h1 { font-size: 15px; margin: 0; font-weight: 600; letter-spacing: .2px; }
+  .tag { font-size: 11px; color: var(--muted); border: 1px solid var(--line);
+         padding: 2px 7px; border-radius: 99px; }
+  select {
+    background: var(--bg); color: var(--fg); border: 1px solid var(--line);
+    border-radius: 6px; padding: 5px 9px; font: inherit;
+  }
+  .price { font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 600; }
+  .dot { width: 7px; height: 7px; border-radius: 99px; background: var(--muted);
+         display: inline-block; margin-right: 6px; }
+  .dot.live { background: var(--up); box-shadow: 0 0 0 3px rgba(38,166,154,.18); }
+  main { padding: 20px; display: grid; gap: 16px; }
+  #chart { height: 440px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .stats { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .card { background: var(--panel); border: 1px solid var(--line);
+          border-radius: 10px; padding: 12px 14px; }
+  .card .k { font-size: 11px; color: var(--muted); text-transform: uppercase;
+             letter-spacing: .06em; }
+  .card .v { font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums;
+             margin-top: 3px; }
+  footer { padding: 0 20px 24px; color: var(--muted); font-size: 12px; }
+  code { background: var(--panel); padding: 1px 5px; border-radius: 4px; color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Market Data Pipeline</h1>
+  <span class="tag">Phase 1 · Coinbase → Kafka → ClickHouse</span>
+  <select id="symbol"></select>
+  <span class="price" id="last">—</span>
+  <span id="status"><span class="dot" id="dot"></span><span id="statusText">connecting…</span></span>
+</header>
+
+<main>
+  <div id="chart"></div>
+  <div class="stats" id="stats"></div>
+</main>
+
+<footer>
+  Bars are aggregated from raw trades on read (<code>market.bars_1m_live</code>).
+  Phase 2 replaces this with event-time windows computed in Flink.
+</footer>
+
+<script>
+const fmt = (n, d = 2) =>
+  n === null || n === undefined ? "—"
+  : Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+
+const chart = LightweightCharts.createChart(document.getElementById("chart"), {
+  layout: { background: { color: "#0b0e14" }, textColor: "#8b98a9" },
+  grid: { vertLines: { color: "#161c26" }, horzLines: { color: "#161c26" } },
+  rightPriceScale: { borderColor: "#1f2733" },
+  timeScale: { borderColor: "#1f2733", timeVisible: true, secondsVisible: false },
+  crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+});
+const candles = chart.addCandlestickSeries({
+  upColor: "#26a69a", downColor: "#ef5350", borderVisible: false,
+  wickUpColor: "#26a69a", wickDownColor: "#ef5350",
+});
+addEventListener("resize", () => chart.applyOptions({ width: document.getElementById("chart").clientWidth }));
+
+const toSec = (iso) => Math.floor(new Date(iso + (iso.endsWith("Z") ? "" : "Z")).getTime() / 1000);
+let socket = null, current = null, lastBar = null;
+
+async function loadBars(symbol) {
+  const res = await fetch(`/api/bars?instrument_id=${encodeURIComponent(symbol)}&minutes=240`);
+  if (!res.ok) { candles.setData([]); lastBar = null; return; }
+  const bars = (await res.json()).map((b) => ({
+    time: toSec(b.bucket), open: b.open, high: b.high, low: b.low, close: b.close,
+  }));
+  candles.setData(bars);
+  lastBar = bars.at(-1) ?? null;
+  chart.timeScale().fitContent();
+}
+
+function applyTick(t) {
+  const price = t.price;
+  document.getElementById("last").textContent = fmt(price);
+  const bucket = Math.floor(toSec(t.event_time) / 60) * 60;
+  if (!lastBar || bucket > lastBar.time) {
+    lastBar = { time: bucket, open: price, high: price, low: price, close: price };
+  } else {
+    lastBar.high = Math.max(lastBar.high, price);
+    lastBar.low = Math.min(lastBar.low, price);
+    lastBar.close = price;
+  }
+  candles.update(lastBar);
+}
+
+function setStatus(live, text) {
+  document.getElementById("dot").className = live ? "dot live" : "dot";
+  document.getElementById("statusText").textContent = text;
+}
+
+function openSocket(symbol) {
+  if (socket) { socket.onclose = null; socket.close(); }
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  socket = new WebSocket(`${proto}://${location.host}/ws/ticks?instrument_id=${encodeURIComponent(symbol)}`);
+  socket.onopen = () => setStatus(true, "live");
+  socket.onclose = () => { setStatus(false, "reconnecting…"); setTimeout(() => openSocket(symbol), 2000); };
+  socket.onmessage = (ev) => {
+    const msg = JSON.parse(ev.data);
+    for (const t of msg.ticks ?? []) applyTick(t);
+  };
+}
+
+async function refreshStats() {
+  try {
+    const s = await fetch("/api/stats").then((r) => r.json());
+    document.getElementById("stats").innerHTML = [
+      ["Ticks stored", Number(s.ticks ?? 0).toLocaleString()],
+      ["Ticks / min", Number(s.ticks_last_minute ?? 0).toLocaleString()],
+      ["Instruments", s.instruments ?? 0],
+      ["Latency p50", s.p50_latency_ms != null ? fmt(s.p50_latency_ms) + " ms" : "—"],
+      ["Latency p99", s.p99_latency_ms != null ? fmt(s.p99_latency_ms) + " ms" : "—"],
+      ["DLQ / decode errors", s.dlq ?? 0],
+    ].map(([k, v]) => `<div class="card"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+  } catch { /* stats are best-effort */ }
+}
+
+async function init() {
+  const sel = document.getElementById("symbol");
+  let symbols = [];
+  try { symbols = await fetch("/api/instruments").then((r) => r.json()); } catch {}
+  if (!symbols.length) symbols = ["BTC-USD"];
+  sel.innerHTML = symbols.map((s) => `<option>${s}</option>`).join("");
+  current = symbols[0];
+  sel.onchange = async () => { current = sel.value; lastBar = null; await loadBars(current); openSocket(current); };
+  await loadBars(current);
+  openSocket(current);
+  refreshStats();
+  setInterval(refreshStats, 5000);
+}
+init();
+</script>
+</body>
+</html>

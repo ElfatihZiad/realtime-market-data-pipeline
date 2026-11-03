@@ -1,0 +1,40 @@
+# OS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+dist/
+build/
+*.egg-info/
+
+# Generated code (regenerate with `just codegen`)
+libs/mdp_core/src/mdp_core/gen/
+web/src/gen/
+infra/clickhouse/format_schemas/
+
+# Secrets & local config — NEVER commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+OAuth.json
+credentials.json
+
+# Node
+node_modules/
+.next/
+out/
+
+# Local data & infra state
+data/
+.clickhouse/
+*.tfstate
+*.tfstate.*
+.terraform/

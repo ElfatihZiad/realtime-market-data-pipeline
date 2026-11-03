@@ -1,47 +1,73 @@
-# A real-time financial data streaming pipeline and visualization platform
+# Real-time market data pipeline
 
-# Introduction
+A streaming pipeline for market data: a live trade feed into Kafka, processed on
+event time, served to a dashboard that updates as trades happen.
 
-This repo shows my project about real-time stock data pipeline. All the code is written in PYTHON. In this project, I play with various Data Engineering
-frameworks to develop a financial data processing and visualization platform using ***Apache Kafka***, ***Apache Cassandra***, and ***Bokeh***. I used Kafka for realtime stock price and market news streaming, Cassandra for historical and realtime stock data warehousing, and Bokeh for visualization on web browsers. I also wrote a web crawler to scrape companys' financial statements and basic information from Yahoo Finance, and played with various economy data APIs. 
+> **Status — rebuild in progress.** This project was originally built in 2021/22
+> on Kafka 2.3 + ZooKeeper, Cassandra and Bokeh. It is being rebuilt in phases;
+> **Phase 1 of 6 is complete and runs today**. The original code is preserved
+> under [`legacy/`](legacy/) for reference. See [DESIGN.md](DESIGN.md) for the
+> full plan and [`docs/adr/`](docs/adr/) for the decisions behind it.
 
+## What works right now (Phase 1)
 
+```
+Coinbase WS  ──▶  ingest-crypto  ──▶  Kafka 4.3 (KRaft)  ──▶  ClickHouse 26.9  ──▶  FastAPI  ──▶  live chart
+   public         validate +           ticks.raw              Kafka engine +        REST +
+   24/7 feed      normalise            (Protobuf)             materialised view     WebSocket push
+                      │
+                      └──▶ ticks.dlq  (malformed input is kept, not swallowed)
+```
 
-# Architecture
+- **Real trades only.** Coinbase's public feed is keyless and runs 24/7, so the
+  dashboard is live whenever you open it. Nothing here fabricates a price.
+- **Contracts are load-bearing.** [`contracts/market/v1/tick.proto`](contracts/market/v1/tick.proto)
+  is both the producer's schema and the schema ClickHouse decodes the topic with.
+- **The pipeline measures itself.** Every tick carries the venue's `event_time`
+  and our `ingest_time`; their difference is end-to-end latency, shown on the
+  dashboard (p50 ≈ 5 ms, p99 ≈ 120 ms locally).
 
-There are currently 3 tabs in the webpage:
+## Quickstart
 
-- ***Stock: Streaming & Fundamental*** 
-  - Single stock's candlestick plot, basic company & financial information;
-  - Realtime S&P500 price during trading hours (*fake date* during non-trading hours)
-- ***Stock: Comparison***
-  - 2 user-selected stocks' price, and their statstical summay and correlation
-  - 5,10,30-day moving average of adjusted close price
-- ***Economy***
-  - Geomap of various economy data by state
-  - 4 economy indicators nationwide for comparison
-  - The most recent market news 
+Needs Docker, [`uv`](https://docs.astral.sh/uv/) and [`just`](https://just.systems).
 
-&nbsp;
+```bash
+just install     # sync the uv workspace
+just up          # Kafka + ClickHouse, with topics and schema created
+just ingest      # start the Coinbase feed   (leave running)
+just api         # start the dashboard       (leave running, in another shell)
+```
 
+Then open <http://localhost:8000>. Data appears within a few seconds.
 
-Here is the architecture of the platform.
+```bash
+just test        # unit tests
+just lint        # ruff + mypy --strict
+just down        # tear down, including volumes
+```
 
-<img src="https://github.com/ElfatihZiad/realtime-market-data-pipeline/blob/main/images/pipeline.png?raw=true" width="900" />
+## Roadmap
 
-Please check each tab's screenshot:
+| Phase | Scope | Status |
+|---|---|---|
+| 1 | Streaming skeleton: feed → Kafka → ClickHouse → live chart | **done** |
+| 2 | Flink SQL: event-time OHLCV bars, VWAP, volatility, watermarks, late data | next |
+| 3 | Iceberg + dbt marts; SEC EDGAR fundamentals, FRED macro; Airflow 3 for batch | |
+| 4 | CI gate, testcontainers integration tests, Prometheus/Grafana, SLOs | |
+| 5 | Next.js dashboard, hosted demo, diagrams; delete `legacy/` | |
+| 6 | Streaming news sentiment joined to price moves | |
 
+## Layout
 
-**Tab 1:**
+```
+contracts/     protobuf schemas — the source of truth for the wire format
+services/      ingest_crypto (feed → Kafka), api (ClickHouse → REST/WS)
+libs/          mdp_core: config, logging, generated contract code
+infra/         ClickHouse schema and format schemas
+docs/adr/      why things are the way they are
+legacy/        the 2021–22 version, kept for reference until Phase 5
+```
 
-<img src="https://github.com/ElfatihZiad/realtime-market-data-pipeline/blob/main/images/tab1.gif" width="800" />
+## Licence
 
-
-**Tab 2:**
-
-<img src="https://github.com/ElfatihZiad/realtime-market-data-pipeline/blob/main/images/tab2.gif" width="800" />
-
-
-**Tab 3:**
-
-<img src="https://github.com/ElfatihZiad/realtime-market-data-pipeline/blob/main/images/tab3.gif" width="800" />
+See [LICENSE](LICENSE).

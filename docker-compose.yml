@@ -1,0 +1,89 @@
+# Local development stack. One command, no README archaeology:
+#   just up      (or: docker compose up -d --wait)
+#
+# Kafka runs in KRaft mode. There is no ZooKeeper here and there cannot be:
+# Kafka 4.0 removed it entirely.
+
+name: mdp
+
+services:
+  kafka:
+    image: apache/kafka:4.3.2
+    container_name: mdp-kafka
+    ports:
+      - "19092:19092"   # host -> broker (EXTERNAL listener)
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: INTERNAL://:9092,CONTROLLER://:9093,EXTERNAL://:19092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:19092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_RETENTION_HOURS: 24
+      CLUSTER_ID: mdp-local-cluster-0001
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+
+  # Creates the topics, then exits. Keyed by instrument_id, so per-instrument
+  # ordering holds across partitions.
+  kafka-init:
+    image: apache/kafka:4.3.2
+    container_name: mdp-kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -e
+        for t in ticks.raw ticks.dlq; do
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 \
+            --create --if-not-exists --topic "$$t" --partitions 3 --replication-factor 1
+        done
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list
+    restart: "no"
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:26.9
+    container_name: mdp-clickhouse
+    ports:
+      - "8123:8123"   # HTTP  (http://localhost:8123/play)
+      - "9000:9000"   # native
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      CLICKHOUSE_DB: market
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    ulimits:
+      nofile: { soft: 262144, hard: 262144 }
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+      - ./infra/clickhouse/init:/docker-entrypoint-initdb.d:ro
+      # The proto contracts ARE the schema ClickHouse decodes the topic with.
+      # A generated copy, not ./contracts directly: the server entrypoint
+      # chowns this path on boot, which fails on a read-only mount.
+      # Populated by `just codegen`.
+      - ./infra/clickhouse/format_schemas:/var/lib/clickhouse/format_schemas
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --query 'SELECT 1' >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+volumes:
+  kafka-data:
+  clickhouse-data:

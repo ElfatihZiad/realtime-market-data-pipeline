@@ -1,0 +1,43 @@
+[project]
+name = "realtime-market-data-pipeline"
+version = "0.2.0"
+description = "Real-time market data pipeline: Kafka -> Flink -> ClickHouse/Iceberg -> API"
+requires-python = ">=3.13"
+
+[tool.uv.workspace]
+members = ["libs/*", "services/*"]
+
+[tool.uv.sources]
+mdp-core = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "grpcio-tools>=1.68",
+    "types-protobuf>=5.28",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+extend-exclude = ["legacy", "**/gen/**"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "BLE", "ASYNC", "RUF"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+exclude = ["legacy/", ".*/gen/.*"]
+
+[[tool.mypy.overrides]]
+module = ["confluent_kafka.*", "mdp_core.gen.*", "clickhouse_connect.*"]
+ignore_missing_imports = true
+follow_imports = "skip"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["libs", "services"]
