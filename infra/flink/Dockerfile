@@ -32,3 +32,7 @@ RUN set -eux; \
     curl -fsSL -o /opt/flink/lib/iceberg-aws-bundle.jar \
         "${ICEBERG_MAVEN}/iceberg-aws-bundle/${ICEBERG_AWS}/iceberg-aws-bundle-${ICEBERG_AWS}.jar"; \
     chown flink:flink /opt/flink/lib/*.jar
+
+# The Prometheus reporter ships with Flink but sits in opt/, which is not on
+# the classpath. Moving it into lib/ is what turns on :9249.
+RUN cp /opt/flink/opt/flink-metrics-prometheus-*.jar /opt/flink/lib/

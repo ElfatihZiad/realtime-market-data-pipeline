@@ -22,6 +22,12 @@ build/
 OAuth.json
 credentials.json
 
+# dbt build artifacts — regenerated on every run, never reviewable
+warehouse/target/
+warehouse/logs/
+warehouse/dbt_packages/
+.user.yml
+
 # Node
 node_modules/
 .next/

@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     # SEC requires a descriptive User-Agent with contact details.
     sec_user_agent: str = "market-data-pipeline (contact: set SEC_USER_AGENT)"
 
+    # Observability. Empty disables tracing entirely.
+    otel_exporter_otlp_endpoint: str = ""
+
     # Ops
     metrics_port: int = Field(default=9100, description="Prometheus scrape port")
     log_level: str = "INFO"

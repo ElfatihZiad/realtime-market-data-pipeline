@@ -4,7 +4,7 @@ version = "0.2.0"
 description = "Coinbase trade feed -> Kafka ticks.raw"
 requires-python = ">=3.13"
 dependencies = [
-    "mdp-core",
+    "mdp-core[otel]",
     "websockets>=14.1",
     "confluent-kafka[avro,schemaregistry]>=2.6",
     "prometheus-client>=0.21",

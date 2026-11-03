@@ -5,7 +5,7 @@ event time, served to a dashboard that updates as trades happen.
 
 > **Status — rebuild in progress.** This project was originally built in 2021/22
 > on Kafka 2.3 + ZooKeeper, Cassandra and Bokeh. It is being rebuilt in phases;
-> **Phases 1–3 of 6 are complete and run today**. The original code is preserved
+> **Phases 1–4 of 6 are complete and run today**. The original code is preserved
 > under [`legacy/`](legacy/) for reference. See [DESIGN.md](DESIGN.md) for the
 > full plan and [`docs/adr/`](docs/adr/) for the decisions behind it.
 
@@ -34,6 +34,9 @@ Coinbase WS ─▶ ingest ─▶ Kafka 4.3 ─▶ Flink 2.1 SQL ─┬─▶ bar
   late-arrival rate and decode failures.
 - **Two stores, written from the same stream.** ClickHouse is the hot store;
   Iceberg on object storage is the history. Neither is the other's cache.
+- **It can be operated, not just run.** Prometheus scrapes the services, Kafka
+  consumer lag and Flink; traces go to Jaeger; and five SLOs live as alerting
+  rules rather than as sentences. See [ADR 0016](docs/adr/0016-observability-and-slos.md).
 
 ## Quickstart
 
@@ -48,8 +51,9 @@ just dbt-build   # build and test the marts
 just api         # start the dashboard        (leave running, another shell)
 ```
 
-Flink UI <http://localhost:8081> · Airflow <http://localhost:8082> ·
-schemas via `just schemas`.
+Grafana <http://localhost:3000> · Prometheus <http://localhost:9090> ·
+Jaeger <http://localhost:16686> · Flink <http://localhost:8081> ·
+Airflow <http://localhost:8082> · schemas via `just schemas`.
 
 Then open <http://localhost:8000>. Data appears within a few seconds.
 
@@ -72,8 +76,8 @@ matches what Flink emitted.
 | 1 | Streaming skeleton: feed → Kafka → ClickHouse → live chart | **done** |
 | 2 | Flink SQL: event-time OHLCV bars, VWAP, volatility, watermarks, late data | **done** |
 | 3 | Iceberg sink + dbt marts; SEC EDGAR fundamentals, FRED macro; Airflow 3 for batch | **done** |
-| 4 | Testcontainers integration tests, Prometheus/Grafana, OTel, SLOs | next |
-| 5 | Next.js dashboard, hosted demo, diagrams; delete `legacy/` | |
+| 4 | Prometheus + Grafana, OpenTelemetry traces, SLO rules | **done** |
+| 5 | Next.js dashboard, hosted demo, diagrams; delete `legacy/` | next |
 | 6 | Streaming news sentiment joined to price moves | |
 
 ## Layout

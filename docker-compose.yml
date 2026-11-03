@@ -117,7 +117,9 @@ services:
     image: adobe/s3mock:5.2.3
     container_name: mdp-s3mock
     ports:
-      - "9090:9090"
+      # 9091 on the host: 9090 is Prometheus's conventional port and it wins.
+      # Everything inside the network still talks to s3mock:9090.
+      - "9091:9090"
     environment:
       retainFilesOnExit: "true"
       root: /data
@@ -204,6 +206,8 @@ services:
         rest.bind-address: 0.0.0.0
         execution.checkpointing.interval: 10s
         state.backend.type: hashmap
+        metrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
+        metrics.reporter.prom.port: 9249
     volumes:
       - ./stream/sql:/opt/sql:ro
       - flink-checkpoints:/tmp/flink-checkpoints
@@ -229,6 +233,8 @@ services:
       FLINK_PROPERTIES: |
         jobmanager.rpc.address: flink-jobmanager
         taskmanager.numberOfTaskSlots: 4
+        metrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
+        metrics.reporter.prom.port: 9249
     volumes:
       - ./stream/sql:/opt/sql:ro
       - flink-checkpoints:/tmp/flink-checkpoints
@@ -265,6 +271,7 @@ services:
       AWS_ACCESS_KEY_ID: mdp
       AWS_SECRET_ACCESS_KEY: mdp-secret
       AWS_REGION: us-east-1
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
       SEC_USER_AGENT: ${SEC_USER_AGENT:-}
       FRED_API_KEY: ${FRED_API_KEY:-}
       EDGAR_TICKERS: ${EDGAR_TICKERS:-AAPL,MSFT,GOOGL,AMZN,TSLA,META}
@@ -278,10 +285,73 @@ services:
       retries: 20
       start_period: 90s
 
+  # ─────────────────────────── observability ───────────────────────────
+  # Metrics say the pipeline is slow. Traces say which hop is slow. A pipeline
+  # with five hops needs both.
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:v1.11.0
+    container_name: mdp-kafka-exporter
+    command: ["--kafka.server=kafka:9092"]
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "9308:9308"
+
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    container_name: mdp-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+      - --web.enable-lifecycle
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    extra_hosts:
+      # The ingest service and API run on the host, not in compose.
+      - "host.docker.internal:host-gateway"
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.76.0
+    container_name: mdp-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"   # UI
+      - "4318:4318"     # OTLP/HTTP
+
+  grafana:
+    image: grafana/grafana:13.2.5
+    container_name: mdp-grafana
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_USERS_DEFAULT_THEME: dark
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+
 volumes:
   kafka-data:
   clickhouse-data:
   flink-checkpoints:
+  # These two are ONE unit of state. The catalog stores pointers to metadata
+  # files in the warehouse; wiping either alone leaves the catalog referencing
+  # objects that no longer exist and every Iceberg statement fails with
+  # "Location does not exist". `just lake-reset` clears both together.
   iceberg-warehouse:
   iceberg-catalog:
   airflow-data:
+  prometheus-data:
+  grafana-data:

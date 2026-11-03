@@ -13,8 +13,13 @@ up:
     # letting `up --build` do it builds the same tag twice in parallel.
     docker compose build flink-jobmanager
     docker compose up -d --wait
-    @echo "ClickHouse       http://localhost:8123/play"
+    @echo "Dashboard        http://localhost:8000   (just api)"
+    @echo "Grafana          http://localhost:3000   (anonymous viewer)"
+    @echo "Prometheus       http://localhost:9090"
+    @echo "Jaeger           http://localhost:16686"
     @echo "Flink UI         http://localhost:8081"
+    @echo "Airflow          http://localhost:8082"
+    @echo "ClickHouse       http://localhost:8123/play"
     @echo "Schema Registry  http://localhost:18081/subjects"
 
 down:
@@ -47,6 +52,14 @@ schema-reset:
             --query "DROP TABLE IF EXISTS market.$t" 
     done
     just schema
+
+# Wipe the Iceberg warehouse AND its catalog together. They are one unit of
+# state: clearing either alone leaves dangling metadata pointers.
+lake-reset:
+    docker compose rm -sf iceberg-rest s3mock s3mock-init
+    docker volume rm -f mdp_iceberg-warehouse mdp_iceberg-catalog
+    docker compose up -d --wait s3mock s3mock-init iceberg-rest
+    @echo "lake reset — resubmit the Flink jobs with `just stream`"
 
 # Submit a Flink SQL script (detached). e.g. `just flink-sql 10_bars.sql`
 flink-sql script:
