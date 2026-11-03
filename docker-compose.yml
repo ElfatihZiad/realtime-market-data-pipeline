@@ -26,6 +26,10 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_LOG_RETENTION_HOURS: 24
+      # Without this the broker writes its log to the image's default path and
+      # the kafka-data volume below is mounted but never used — so every
+      # `docker compose down` silently discarded the topics.
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
       CLUSTER_ID: mdp-local-cluster-0001
     healthcheck:
       test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
@@ -102,13 +106,94 @@ services:
       retries: 18
       start_period: 20s
 
+  # S3-compatible object storage for the Iceberg warehouse.
+  #
+  # Not MinIO: it no longer publishes publicly pullable images. s3mock is a
+  # small S3 server that is enough to exercise the real path — Iceberg writes
+  # through S3FileIO (the AWS SDK), not through Hadoop's local filesystem,
+  # which is what production looks like. Swapping to real S3 is a change of
+  # endpoint and credentials.
+  s3mock:
+    image: adobe/s3mock:5.2.3
+    container_name: mdp-s3mock
+    ports:
+      - "9090:9090"
+    environment:
+      retainFilesOnExit: "true"
+      root: /data
+    volumes:
+      - iceberg-warehouse:/data
+    healthcheck:
+      # The image ships wget, not curl. "/" lists buckets, which is enough
+      # to know the server is up.
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:9090/ >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 15s
+
+  # Creates the warehouse bucket. s3mock's own `initialBuckets` setting did
+  # not take, and Iceberg will not create a bucket for you — it expects one to
+  # exist, exactly as real S3 does.
+  s3mock-init:
+    image: curlimages/curl:8.17.0
+    container_name: mdp-s3mock-init
+    depends_on:
+      s3mock:
+        condition: service_healthy
+    entrypoint: ["sh", "-c"]
+    # Idempotent: creating a bucket that already exists returns 409, which is
+    # success for our purposes.
+    command:
+      - |
+        code=$$(curl -sS -o /dev/null -w '%{http_code}' -X PUT http://s3mock:9090/warehouse)
+        echo "PUT /warehouse -> $$code"
+        [ "$$code" = "200" ] || [ "$$code" = "409" ]
+    restart: "no"
+
+  # Iceberg REST catalog. The warehouse is a shared volume rather than object
+  # storage: MinIO no longer publishes publicly pullable images, so there is no
+  # S3 emulator to point at here. Swapping to S3FileIO in cloud is a change of
+  # CATALOG_* env vars plus the iceberg-aws-bundle jar — see
+  # docs/adr/0012-iceberg-rest-catalog-filesystem-warehouse.md.
+  iceberg-rest:
+    image: apache/iceberg-rest-fixture:1.10.1
+    container_name: mdp-iceberg-rest
+    ports:
+      - "8181:8181"
+    depends_on:
+      s3mock-init:
+        condition: service_completed_successfully
+    environment:
+      CATALOG_WAREHOUSE: s3://warehouse/
+      CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
+      CATALOG_S3_ENDPOINT: http://s3mock:9090
+      CATALOG_S3_PATH__STYLE__ACCESS: "true"
+      CATALOG_CATALOG__IMPL: org.apache.iceberg.jdbc.JdbcCatalog
+      CATALOG_URI: jdbc:sqlite:file:/catalog/catalog.db
+      CATALOG_JDBC_SCHEMA__VERSION: V1
+      AWS_ACCESS_KEY_ID: mdp
+      AWS_SECRET_ACCESS_KEY: mdp-secret
+      AWS_REGION: us-east-1
+    user: root
+    volumes:
+      - iceberg-catalog:/catalog
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS 'http://localhost:8181/v1/config?warehouse=s3://warehouse/' >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 20s
+
   flink-jobmanager:
     build: ./infra/flink
-    image: mdp-flink:2.2.1
+    image: mdp-flink:2.1.3
     container_name: mdp-flink-jobmanager
     command: jobmanager
     depends_on:
       schema-registry:
+        condition: service_healthy
+      iceberg-rest:
         condition: service_healthy
     ports:
       - "8081:8081"   # Flink web UI
@@ -130,8 +215,11 @@ services:
       start_period: 20s
 
   flink-taskmanager:
-    build: ./infra/flink
-    image: mdp-flink:2.2.1
+    # No `build:` here on purpose. Both Flink services run the same image, and
+    # declaring the build twice makes Compose build the same tag concurrently,
+    # which races and fails with "image already exists". The jobmanager builds
+    # it; this one reuses it.
+    image: mdp-flink:2.1.3
     container_name: mdp-flink-taskmanager
     command: taskmanager
     depends_on:
@@ -145,7 +233,55 @@ services:
       - ./stream/sql:/opt/sql:ro
       - flink-checkpoints:/tmp/flink-checkpoints
 
+  # Airflow 3, for BATCH ONLY. The streaming jobs are long-running services
+  # and are deliberately not modelled as DAG tasks — see
+  # docs/adr/0004-airflow-for-batch-only.md.
+  #
+  # `standalone` runs the api-server, scheduler, dag-processor and triggerer in
+  # one container against SQLite. That is a development topology, not a
+  # production one; in cloud these are separate deployments on Postgres.
+  airflow:
+    build:
+      context: .
+      dockerfile: infra/airflow/Dockerfile
+    image: mdp-airflow:3.3.2
+    container_name: mdp-airflow
+    command: standalone
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    ports:
+      - "8082:8080"
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW__API_AUTH__JWT_SECRET: mdp-local-dev-secret
+      AIRFLOW_HOME: /opt/airflow
+      # The batch tasks reach the rest of the stack by service name.
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: "8123"
+      ICEBERG_REST_URI: http://iceberg-rest:8181
+      S3_ENDPOINT: http://s3mock:9090
+      AWS_ACCESS_KEY_ID: mdp
+      AWS_SECRET_ACCESS_KEY: mdp-secret
+      AWS_REGION: us-east-1
+      SEC_USER_AGENT: ${SEC_USER_AGENT:-}
+      FRED_API_KEY: ${FRED_API_KEY:-}
+      EDGAR_TICKERS: ${EDGAR_TICKERS:-AAPL,MSFT,GOOGL,AMZN,TSLA,META}
+    volumes:
+      - ./orchestration/dags:/opt/airflow/dags:ro
+      - airflow-data:/opt/airflow
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/api/v2/version >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 90s
+
 volumes:
   kafka-data:
   clickhouse-data:
   flink-checkpoints:
+  iceberg-warehouse:
+  iceberg-catalog:
+  airflow-data:

@@ -38,5 +38,48 @@ jobs:
       - name: Test
         run: uv run pytest -q
 
-  # Phase 4 adds a second job here: integration tests against real Kafka and
+  # The warehouse models are SQL, so the only honest way to check them is
+  # against a real ClickHouse. This creates the tables and runs `dbt build`
+  # against an empty database: it proves every model compiles and executes and
+  # every test runs, without needing a broker or a live feed.
+  warehouse:
+    runs-on: ubuntu-latest
+    services:
+      clickhouse:
+        image: clickhouse/clickhouse-server:26.9
+        ports:
+          - 8123:8123
+        options: >-
+          --health-cmd "clickhouse-client --query 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      CLICKHOUSE_HOST: localhost
+      CLICKHOUSE_PORT: "8123"
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ""
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+
+      - name: Sync workspace
+        run: uv sync --all-packages
+
+      # Only the MergeTree tables; the Kafka engine tables in 02-streaming.sql
+      # need a broker and a schema registry that do not exist in CI.
+      - name: Create warehouse tables
+        run: uv run python infra/clickhouse/apply_schema.py infra/clickhouse/init/01-tables.sql
+
+      - name: dbt build
+        working-directory: warehouse
+        env:
+          DBT_PROFILES_DIR: .
+        run: uv run dbt build --no-use-colors
+
+  # Phase 4 adds a third job here: integration tests against real Kafka and
   # ClickHouse via testcontainers.

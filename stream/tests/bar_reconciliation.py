@@ -48,13 +48,24 @@ def main() -> int:
                 FROM market.bars
                 WHERE bar_interval = '1m'
                   AND window_start < now() - toIntervalMinute({skip:UInt8})
-                  -- Skip the job's FIRST window. The source starts at
-                  -- latest-offset, so Flink joins that window part-way through
-                  -- and its bar is incomplete by construction, while the
-                  -- replay sees every tick ClickHouse stored. Not a defect,
-                  -- but not comparable either.
-                  AND window_start > (SELECT min(window_start) FROM market.bars
-                                      WHERE bar_interval = '1m')
+                  -- Only compare windows the job was already running through.
+                  --
+                  -- The source starts at latest-offset, so the first window
+                  -- after any start or restart is joined part-way through:
+                  -- Flink's bar is incomplete by construction while the replay
+                  -- sees every tick ClickHouse stored. That is not a defect,
+                  -- but it is not comparable either.
+                  --
+                  -- A restart shows up as a GAP in the bar sequence, so the
+                  -- test is "did this instrument also produce a bar for the
+                  -- preceding minute". Excluding only the single earliest
+                  -- window is not enough — every restart creates another
+                  -- partial one, which is how this check first failed.
+                  AND (instrument_id, window_start - INTERVAL 1 MINUTE) IN (
+                      SELECT instrument_id, window_start
+                      FROM market.bars
+                      WHERE bar_interval = '1m'
+                  )
             ),
             -- the same windows recomputed from stored ticks, minus the trades
             -- Flink was right to exclude
