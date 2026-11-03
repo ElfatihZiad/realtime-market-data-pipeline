@@ -1,0 +1,38 @@
+version: 2
+
+models:
+  - name: fct_bars_daily
+    description: Daily OHLCV per instrument, rolled up from watermark-closed 1m bars.
+    columns:
+      - name: instrument_id
+        tests: [not_null]
+      - name: trade_date
+        tests: [not_null]
+      - name: bars
+        tests: [not_null]
+      - name: volume
+        tests: [not_null]
+
+  - name: fct_instrument_liquidity
+    description: Per-instrument, per-day trade activity, including late arrivals.
+    columns:
+      - name: instrument_id
+        tests: [not_null]
+      - name: trade_date
+        tests: [not_null]
+      - name: trades
+        tests: [not_null]
+
+  - name: fct_pipeline_health
+    description: >
+      Daily operability summary: throughput, latency percentiles, late-arrival
+      rate and decode failures.
+    columns:
+      - name: trade_date
+        tests:
+          - not_null
+          - unique
+      - name: ticks
+        tests: [not_null]
+      - name: late_rate
+        tests: [not_null]

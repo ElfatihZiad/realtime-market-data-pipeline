@@ -1,0 +1,41 @@
+version: 2
+
+sources:
+  - name: market
+    description: >
+      Bronze. Written by the streaming pipeline, not by dbt: `ticks` and
+      `ticks_late` come from the Kafka engine, `bars` and `signals` from Flink.
+      dbt only reads these.
+    schema: market
+    tables:
+      - name: ticks
+        description: One row per executed trade, as received.
+        columns:
+          - name: instrument_id
+            tests: [not_null]
+          - name: event_time
+            description: The venue's clock. All windowing is on this.
+            tests: [not_null]
+          - name: price
+            tests: [not_null]
+          - name: latency_us
+            description: ingest_time - event_time, per tick.
+      - name: bars
+        description: Event-time OHLCV windows closed by Flink watermarks.
+        columns:
+          - name: instrument_id
+            tests: [not_null]
+          - name: bar_interval
+            tests:
+              - not_null
+              - accepted_values: {values: ["1m", "5m"]}
+          - name: window_start
+            tests: [not_null]
+      - name: signals
+        description: Realized volatility and spike flags over the bar stream.
+      - name: ticks_late
+        description: >
+          Trades that arrived after their window had closed. The size of this
+          table is the running cost of the watermark delay.
+      - name: ticks_errors
+        description: Messages the Kafka engine could not decode.

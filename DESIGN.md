@@ -55,11 +55,11 @@ The streaming path is deliberately **not** orchestrated — see
 | Feed | Coinbase public WS (primary), equities secondary | [ADR 0005](docs/adr/0005-crypto-as-primary-feed.md) |
 | Broker | Apache Kafka 4.3, KRaft | ZooKeeper was removed in Kafka 4.0 |
 | Wire format | Avro + Confluent Schema Registry | [ADR 0008](docs/adr/0008-avro-and-schema-registry-over-protobuf.md) |
-| Stream processing | Flink 2.2.1, SQL files | [ADR 0003](docs/adr/0003-flink-sql-over-pyflink.md), [0010](docs/adr/0010-flink-version-follows-connectors.md) |
+| Stream processing | Flink 2.1.3, SQL files | [ADR 0003](docs/adr/0003-flink-sql-over-pyflink.md), [0010](docs/adr/0010-flink-version-follows-connectors.md) |
 | Hot store | ClickHouse 26.9 | [ADR 0001](docs/adr/0001-drop-cassandra-for-clickhouse.md) |
-| Lake | Iceberg v2 on MinIO → S3 | [ADR 0002](docs/adr/0002-iceberg-v2-not-v3.md) |
-| Transform | dbt, medallion models | verify ClickHouse adapter support on Fusion |
-| Orchestration | Airflow 3 | batch only |
+| Lake | Iceberg v2 on S3-compatible storage, REST catalog | [ADR 0002](docs/adr/0002-iceberg-v2-not-v3.md), [0012](docs/adr/0012-iceberg-on-s3-compatible-storage.md) |
+| Transform | dbt 1.12 on ClickHouse, medallion | [ADR 0014](docs/adr/0014-dbt-medallion-and-build.md) |
+| Orchestration | Airflow 3.3.2 | batch only — [ADR 0004](docs/adr/0004-airflow-for-batch-only.md), [0015](docs/adr/0015-airflow-standalone-for-dev.md) |
 | Serving | FastAPI + WebSocket push | replaces Bokeh's 600 ms client poll |
 | Frontend | Next.js + lightweight-charts | Phase 5 |
 | Ops | Prometheus, Grafana, OpenTelemetry | Phase 4 |
@@ -91,11 +91,19 @@ exactly.
 and connector jars, and it belongs with the lake and dbt work rather than
 bolted onto the windowing phase. ClickHouse is the only sink today.
 
-**Phase 3 — warehouse and batch.** Iceberg + dbt medallion marts. SEC EDGAR
-fundamentals, FRED macro. Airflow 3 for batch, including Iceberg compaction and
-snapshot expiry. *Exit: `dbt test` green in CI; a backfill is reproducible.*
+**Phase 3 — warehouse and batch. Done.**
+Iceberg sink on S3-compatible object storage behind a REST catalog, written
+from the same stream as ClickHouse. dbt medallion marts with 33 tests. SEC
+EDGAR and FRED loaders. Airflow 3 with four batch DAGs.
+*Exit met:* CI runs `dbt build` against a bare ClickHouse, and the `dbt_build`
+DAG runs green through Airflow (PASS=39).
 
-**Phase 4 — operability.** Full CI gate, testcontainers integration tests,
+*Caveats, stated rather than buried:* the EDGAR loader is untested against the
+live API — SEC returns 403 unless the User-Agent carries real contact details,
+which only the operator can supply — and the FRED loader needs a free API key.
+Both are covered by unit tests on their parsing, which is where the logic is.
+
+**Phase 4 — operability.** ⭐ Next. Full CI gate, testcontainers integration tests,
 Prometheus/Grafana, OTel traces. Metrics that matter: end-to-end latency,
 consumer lag, bars emitted vs. expected, late-record count, decode failures.
 *Exit: a p99 latency dashboard, and a lag alert that fires when a consumer is paused.*

@@ -12,6 +12,8 @@ mdp-core = { workspace = true }
 
 [dependency-groups]
 dev = [
+    "dbt-core>=1.9",
+    "dbt-clickhouse>=1.9",
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
     "ruff>=0.8",

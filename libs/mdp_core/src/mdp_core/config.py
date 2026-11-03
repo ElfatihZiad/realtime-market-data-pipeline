@@ -33,6 +33,12 @@ class Settings(BaseSettings):
     crypto_symbols: str = "BTC-USD,ETH-USD,SOL-USD"
     coinbase_ws_url: str = "wss://ws-feed.exchange.coinbase.com"
 
+    # Batch sources
+    fred_api_key: str = ""
+    edgar_tickers: str = "AAPL,MSFT,GOOGL,AMZN,TSLA,META"
+    # SEC requires a descriptive User-Agent with contact details.
+    sec_user_agent: str = "market-data-pipeline (contact: set SEC_USER_AGENT)"
+
     # Ops
     metrics_port: int = Field(default=9100, description="Prometheus scrape port")
     log_level: str = "INFO"
@@ -40,6 +46,10 @@ class Settings(BaseSettings):
     @property
     def symbols(self) -> list[str]:
         return [s.strip() for s in self.crypto_symbols.split(",") if s.strip()]
+
+    @property
+    def edgar_ticker_list(self) -> list[str]:
+        return [t.strip().upper() for t in self.edgar_tickers.split(",") if t.strip()]
 
 
 @lru_cache
