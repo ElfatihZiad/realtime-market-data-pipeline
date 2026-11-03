@@ -71,9 +71,9 @@ async def _pump(ws: Any, producer: TickProducer) -> None:
             log.warning("malformed_tick", error=str(exc))
             continue
 
-        producer.send_tick(tick.instrument_id, tick.SerializeToString())
+        producer.send_tick(tick)
         TICKS.labels(instrument_id=tick.instrument_id).inc()
-        FEED_LATENCY.observe((tick.ingest_time_us - tick.event_time_us) / 1_000_000)
+        FEED_LATENCY.observe(tick.latency_us / 1_000_000)
 
 
 async def run() -> None:
@@ -85,6 +85,7 @@ async def run() -> None:
         bootstrap=settings.kafka_bootstrap,
         topic=settings.ticks_topic,
         dlq_topic=settings.ticks_dlq_topic,
+        schema_registry_url=settings.schema_registry_url,
     )
 
     loop = asyncio.get_running_loop()
@@ -96,6 +97,7 @@ async def run() -> None:
         url=settings.coinbase_ws_url,
         symbols=settings.symbols,
         kafka=settings.kafka_bootstrap,
+        schema_registry=settings.schema_registry_url,
         metrics_port=settings.metrics_port,
     )
 

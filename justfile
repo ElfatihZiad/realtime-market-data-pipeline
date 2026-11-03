@@ -7,26 +7,12 @@ default:
 install:
     uv sync --all-packages
 
-# Generate Python code from the proto contracts
-codegen:
-    mkdir -p libs/mdp_core/src/mdp_core/gen
-    uv run python -m grpc_tools.protoc \
-        -I contracts \
-        --python_out=libs/mdp_core/src/mdp_core/gen \
-        --pyi_out=libs/mdp_core/src/mdp_core/gen \
-        contracts/market/v1/tick.proto
-    touch libs/mdp_core/src/mdp_core/gen/__init__.py
-    find libs/mdp_core/src/mdp_core/gen -type d -exec touch {}/__init__.py \;
-    # Stage the contracts where ClickHouse decodes the Kafka topic from them.
-    rm -rf infra/clickhouse/format_schemas
-    mkdir -p infra/clickhouse/format_schemas
-    cp -R contracts/. infra/clickhouse/format_schemas/
-
 # Bring up the full local stack
-up: codegen
-    docker compose up -d --wait
-    @echo "ClickHouse  http://localhost:8123/play"
-    @echo "Kafka UI    http://localhost:8080"
+up:
+    docker compose up -d --build --wait
+    @echo "ClickHouse       http://localhost:8123/play"
+    @echo "Flink UI         http://localhost:8081"
+    @echo "Schema Registry  http://localhost:18081/subjects"
 
 down:
     docker compose down -v
@@ -38,6 +24,53 @@ ingest:
 # Run the API + dashboard
 api:
     uv run --package api uvicorn api.main:app --reload --port 8000
+
+# (Re)apply the ClickHouse schema. The init scripts in the image only run on an
+# empty data volume, so this is how a schema change reaches a running stack.
+schema:
+    docker compose exec -T clickhouse clickhouse-client --multiquery \
+        < infra/clickhouse/init/01-schema.sql
+    @echo "schema applied"
+
+# Drop and recreate the Kafka engine tables and their views. Needed when their
+# SETTINGS change, which CREATE ... IF NOT EXISTS will not do.
+schema-reset:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for t in ticks_mv ticks_errors_mv bars_mv ticks_late_mv signals_mv \
+             ticks_queue bars_queue ticks_late_queue signals_queue; do
+        docker compose exec -T clickhouse clickhouse-client \
+            --query "DROP TABLE IF EXISTS market.$t" 
+    done
+    just schema
+
+# Submit a Flink SQL script (detached). e.g. `just flink-sql 10_bars.sql`
+flink-sql script:
+    docker compose exec -T flink-jobmanager \
+        ./bin/sql-client.sh -f /opt/sql/{{script}}
+
+# Submit every streaming job
+stream: (flink-sql "10_bars.sql") (flink-sql "20_signals.sql")
+
+# What is running on the cluster
+flink-jobs:
+    docker compose exec -T flink-jobmanager ./bin/flink list
+
+# Schemas currently registered
+schemas:
+    @curl -s http://localhost:18081/subjects | python3 -m json.tool
+
+# Prove the late-data path: inject a trade behind the watermark and check it
+# is recorded rather than dropped, and that no closed bar changed.
+check-late:
+    uv run --package ingest-crypto python stream/tests/late_data_check.py
+
+# Reconcile Flink's bars against the same windows recomputed from stored ticks.
+check-bars:
+    uv run --package ingest-crypto python stream/tests/bar_reconciliation.py
+
+# Both streaming correctness checks
+verify: check-late check-bars
 
 lint:
     uv run ruff check .

@@ -54,8 +54,8 @@ The streaming path is deliberately **not** orchestrated — see
 | Language | Python 3.14, `uv` workspace | 3.13 floor |
 | Feed | Coinbase public WS (primary), equities secondary | [ADR 0005](docs/adr/0005-crypto-as-primary-feed.md) |
 | Broker | Apache Kafka 4.3, KRaft | ZooKeeper was removed in Kafka 4.0 |
-| Wire format | Protobuf; Schema Registry from Phase 2 | [ADR 0006](docs/adr/0006-protobuf-wire-format-registry-deferred.md) |
-| Stream processing | Flink 2.3, SQL files | [ADR 0003](docs/adr/0003-flink-sql-over-pyflink.md) |
+| Wire format | Avro + Confluent Schema Registry | [ADR 0008](docs/adr/0008-avro-and-schema-registry-over-protobuf.md) |
+| Stream processing | Flink 2.2.1, SQL files | [ADR 0003](docs/adr/0003-flink-sql-over-pyflink.md), [0010](docs/adr/0010-flink-version-follows-connectors.md) |
 | Hot store | ClickHouse 26.9 | [ADR 0001](docs/adr/0001-drop-cassandra-for-clickhouse.md) |
 | Lake | Iceberg v2 on MinIO → S3 | [ADR 0002](docs/adr/0002-iceberg-v2-not-v3.md) |
 | Transform | dbt, medallion models | verify ClickHouse adapter support on Fusion |
@@ -77,12 +77,19 @@ Contracts, Kafka KRaft, Coinbase ingest with DLQ and backoff, ClickHouse via the
 Kafka engine, FastAPI + a live chart. *Exit: `just up` on a clean clone gives a
 live-updating chart.* Met.
 
-**Phase 2 — real stream processing.** ⭐ The phase that changes how this reads.
-Flink SQL 1m/5m OHLCV bars, VWAP, rolling realised volatility, windowed z-score
-spike detection. Explicit watermarks, late events to a side output. Schema
-Registry. Iceberg sink alongside ClickHouse.
-*Exit: golden-file tests prove bar boundaries; a deliberately delayed event is
-provably accounted for rather than silently dropped.*
+**Phase 2 — real stream processing. Done.**
+Flink SQL 1m/5m OHLCV bars with VWAP, rolling realised volatility and windowed
+z-score spike detection. Explicit watermarks with late events routed to
+`ticks.late` via `CURRENT_WATERMARK()`. Avro + Schema Registry replacing bare
+Protobuf ([ADR 0008](docs/adr/0008-avro-and-schema-registry-over-protobuf.md)).
+*Exit met:* `just check-late` injects a trade behind the watermark and proves it
+is recorded without mutating a closed bar; `just check-bars` reconciles Flink's
+event-time bars against an independent replay of the stored ticks and they match
+exactly.
+
+*Carried to Phase 3:* the **Iceberg sink**. It needs a catalog, object storage
+and connector jars, and it belongs with the lake and dbt work rather than
+bolted onto the windowing phase. ClickHouse is the only sink today.
 
 **Phase 3 — warehouse and batch.** Iceberg + dbt medallion marts. SEC EDGAR
 fundamentals, FRED macro. Airflow 3 for batch, including Iceberg compaction and

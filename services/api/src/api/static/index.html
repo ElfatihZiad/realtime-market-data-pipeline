@@ -46,9 +46,10 @@
 <body>
 <header>
   <h1>Market Data Pipeline</h1>
-  <span class="tag">Phase 1 · Coinbase → Kafka → ClickHouse</span>
+  <span class="tag">Phase 2 · Coinbase → Kafka → Flink → ClickHouse</span>
   <select id="symbol"></select>
   <span class="price" id="last">—</span>
+  <span class="tag" id="vol" title="realized volatility, trailing 20 bars"></span>
   <span id="status"><span class="dot" id="dot"></span><span id="statusText">connecting…</span></span>
 </header>
 
@@ -58,8 +59,10 @@
 </main>
 
 <footer>
-  Bars are aggregated from raw trades on read (<code>market.bars_1m_live</code>).
-  Phase 2 replaces this with event-time windows computed in Flink.
+  Bars are closed by Flink on <strong>event time</strong>: a bar is emitted when the
+  watermark passes its window, not when the query runs. Trades arriving after that are
+  recorded in <code>market.ticks_late</code> rather than silently folded in.
+  Spike markers are |z| &gt; 3 against a trailing 20-bar window.
 </footer>
 
 <script>
@@ -82,6 +85,28 @@ addEventListener("resize", () => chart.applyOptions({ width: document.getElement
 
 const toSec = (iso) => Math.floor(new Date(iso + (iso.endsWith("Z") ? "" : "Z")).getTime() / 1000);
 let socket = null, current = null, lastBar = null;
+
+async function loadSignals(symbol) {
+  try {
+    const rows = await fetch(`/api/signals?instrument_id=${encodeURIComponent(symbol)}&minutes=240`)
+      .then((r) => (r.ok ? r.json() : []));
+    const markers = rows
+      .filter((r) => r.is_spike)
+      .map((r) => ({
+        time: toSec(r.bar_end),
+        position: r.log_return >= 0 ? "belowBar" : "aboveBar",
+        color: r.log_return >= 0 ? "#26a69a" : "#ef5350",
+        shape: r.log_return >= 0 ? "arrowUp" : "arrowDown",
+        text: `z=${Number(r.zscore).toFixed(1)}`,
+      }));
+    candles.setMarkers(markers);
+    const latest = rows.at(-1);
+    document.getElementById("vol").textContent =
+      latest && latest.realized_vol != null
+        ? `σ ${(latest.realized_vol * 100).toFixed(3)}%`
+        : "";
+  } catch { /* signals are best-effort */ }
+}
 
 async function loadBars(symbol) {
   const res = await fetch(`/api/bars?instrument_id=${encodeURIComponent(symbol)}&minutes=240`);
@@ -131,9 +156,11 @@ async function refreshStats() {
     document.getElementById("stats").innerHTML = [
       ["Ticks stored", Number(s.ticks ?? 0).toLocaleString()],
       ["Ticks / min", Number(s.ticks_last_minute ?? 0).toLocaleString()],
-      ["Instruments", s.instruments ?? 0],
+      ["Bars closed", Number(s.bars ?? 0).toLocaleString()],
       ["Latency p50", s.p50_latency_ms != null ? fmt(s.p50_latency_ms) + " ms" : "—"],
       ["Latency p99", s.p99_latency_ms != null ? fmt(s.p99_latency_ms) + " ms" : "—"],
+      ["Late trades", `${s.late_trades ?? 0}${s.max_lateness_ms ? " / " + s.max_lateness_ms + "ms" : ""}`],
+      ["Spikes (|z|>3)", s.spikes ?? 0],
       ["DLQ / decode errors", s.dlq ?? 0],
     ].map(([k, v]) => `<div class="card"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
   } catch { /* stats are best-effort */ }
@@ -146,11 +173,16 @@ async function init() {
   if (!symbols.length) symbols = ["BTC-USD"];
   sel.innerHTML = symbols.map((s) => `<option>${s}</option>`).join("");
   current = symbols[0];
-  sel.onchange = async () => { current = sel.value; lastBar = null; await loadBars(current); openSocket(current); };
+  sel.onchange = async () => {
+    current = sel.value; lastBar = null;
+    await loadBars(current); await loadSignals(current); openSocket(current);
+  };
   await loadBars(current);
+  await loadSignals(current);
   openSocket(current);
   refreshStats();
   setInterval(refreshStats, 5000);
+  setInterval(() => loadSignals(current), 30000);
 }
 init();
 </script>

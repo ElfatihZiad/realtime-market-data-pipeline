@@ -13,27 +13,19 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10.3.3
         with:
           enable-cache: true
 
       - name: Sync workspace
         run: uv sync --all-packages
 
-      # Generated contract code is gitignored; it is regenerated from
-      # contracts/ so the committed .proto stays the single source of truth.
-      - name: Generate contract code
-        run: |
-          mkdir -p libs/mdp_core/src/mdp_core/gen
-          uv run python -m grpc_tools.protoc \
-            -I contracts \
-            --python_out=libs/mdp_core/src/mdp_core/gen \
-            --pyi_out=libs/mdp_core/src/mdp_core/gen \
-            contracts/market/v1/tick.proto
-          find libs/mdp_core/src/mdp_core/gen -type d -exec touch {}/__init__.py \;
+      # No code generation step: the Avro schemas in contracts/ are read at
+      # runtime by the producer and resolved from the schema registry by Flink
+      # and ClickHouse. See docs/adr/0008-avro-and-schema-registry-over-protobuf.md.
 
       - name: Lint
         run: |

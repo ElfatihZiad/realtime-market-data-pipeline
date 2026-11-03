@@ -13,11 +13,6 @@ dist/
 build/
 *.egg-info/
 
-# Generated code (regenerate with `just codegen`)
-libs/mdp_core/src/mdp_core/gen/
-web/src/gen/
-infra/clickhouse/format_schemas/
-
 # Secrets & local config — NEVER commit
 .env
 .env.*

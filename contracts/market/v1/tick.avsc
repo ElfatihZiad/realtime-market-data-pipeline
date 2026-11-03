@@ -1,0 +1,16 @@
+{
+  "type": "record",
+  "name": "Tick",
+  "namespace": "market.v1",
+  "doc": "A single executed trade, normalised across venues. Timestamps are microseconds since the Unix epoch, UTC. event_time_us is the venue's own clock and is what all windowing and watermarking uses; ingest_time_us is ours. Their difference is end-to-end pipeline latency.",
+  "fields": [
+    {"name": "instrument_id", "type": "string", "doc": "Canonical id, e.g. BTC-USD. Also the Kafka partition key."},
+    {"name": "venue", "type": "string", "doc": "coinbase, binance, ..."},
+    {"name": "event_time_us", "type": "long", "doc": "Venue clock, epoch microseconds UTC."},
+    {"name": "ingest_time_us", "type": "long", "doc": "Our clock at receipt, epoch microseconds UTC."},
+    {"name": "price", "type": "double", "doc": "See docs/adr/0007-price-as-double.md."},
+    {"name": "size", "type": "double"},
+    {"name": "side", "type": "string", "default": "", "doc": "Aggressor side: buy, sell, or empty."},
+    {"name": "sequence", "type": "string", "default": "", "doc": "Venue trade id, for de-duplication."}
+  ]
+}

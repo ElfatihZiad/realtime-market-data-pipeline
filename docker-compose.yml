@@ -48,7 +48,7 @@ services:
     command:
       - |
         set -e
-        for t in ticks.raw ticks.dlq; do
+        for t in ticks.raw ticks.dlq ticks.late bars.1m bars.5m signals.1m; do
           /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 \
             --create --if-not-exists --topic "$$t" --partitions 3 --replication-factor 1
         done
@@ -62,8 +62,8 @@ services:
       - "8123:8123"   # HTTP  (http://localhost:8123/play)
       - "9000:9000"   # native
     depends_on:
-      kafka-init:
-        condition: service_completed_successfully
+      schema-registry:
+        condition: service_healthy
     environment:
       CLICKHOUSE_DB: market
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
@@ -72,11 +72,6 @@ services:
     volumes:
       - clickhouse-data:/var/lib/clickhouse
       - ./infra/clickhouse/init:/docker-entrypoint-initdb.d:ro
-      # The proto contracts ARE the schema ClickHouse decodes the topic with.
-      # A generated copy, not ./contracts directly: the server entrypoint
-      # chowns this path on boot, which fails on a read-only mount.
-      # Populated by `just codegen`.
-      - ./infra/clickhouse/format_schemas:/var/lib/clickhouse/format_schemas
     healthcheck:
       test: ["CMD-SHELL", "clickhouse-client --query 'SELECT 1' >/dev/null 2>&1"]
       interval: 10s
@@ -84,6 +79,73 @@ services:
       retries: 12
       start_period: 15s
 
+  # Holds the Avro schemas. Once a contract is registered here, an
+  # incompatible change to it is rejected rather than silently shipped.
+  schema-registry:
+    image: confluentinc/cp-schema-registry:8.2.4
+    container_name: mdp-schema-registry
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    ports:
+      - "18081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
+      SCHEMA_REGISTRY_KAFKASTORE_TOPIC_REPLICATION_FACTOR: 1
+      SCHEMA_REGISTRY_SCHEMA_COMPATIBILITY_LEVEL: backward
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/subjects >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 20s
+
+  flink-jobmanager:
+    build: ./infra/flink
+    image: mdp-flink:2.2.1
+    container_name: mdp-flink-jobmanager
+    command: jobmanager
+    depends_on:
+      schema-registry:
+        condition: service_healthy
+    ports:
+      - "8081:8081"   # Flink web UI
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        rest.address: 0.0.0.0
+        rest.bind-address: 0.0.0.0
+        execution.checkpointing.interval: 10s
+        state.backend.type: hashmap
+    volumes:
+      - ./stream/sql:/opt/sql:ro
+      - flink-checkpoints:/tmp/flink-checkpoints
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/overview >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 20s
+
+  flink-taskmanager:
+    build: ./infra/flink
+    image: mdp-flink:2.2.1
+    container_name: mdp-flink-taskmanager
+    command: taskmanager
+    depends_on:
+      flink-jobmanager:
+        condition: service_healthy
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 4
+    volumes:
+      - ./stream/sql:/opt/sql:ro
+      - flink-checkpoints:/tmp/flink-checkpoints
+
 volumes:
   kafka-data:
   clickhouse-data:
+  flink-checkpoints:
