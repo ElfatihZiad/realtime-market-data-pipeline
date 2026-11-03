@@ -49,8 +49,17 @@ jobs:
         image: clickhouse/clickhouse-server:26.9
         ports:
           - 8123:8123
+        # CLICKHOUSE_USER/PASSWORD are not optional here. With neither set the
+        # image logs "disabling network access for user 'default'" and every
+        # request over the port returns 401 — which is exactly how this job
+        # first failed. The value is a throwaway for an ephemeral container
+        # that exists for the length of one job and is reachable only from it.
+        env:
+          CLICKHOUSE_DB: market
+          CLICKHOUSE_USER: default
+          CLICKHOUSE_PASSWORD: ci
         options: >-
-          --health-cmd "clickhouse-client --query 'SELECT 1'"
+          --health-cmd "clickhouse-client --password ci --query 'SELECT 1'"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 12
@@ -58,7 +67,7 @@ jobs:
       CLICKHOUSE_HOST: localhost
       CLICKHOUSE_PORT: "8123"
       CLICKHOUSE_USER: default
-      CLICKHOUSE_PASSWORD: ""
+      CLICKHOUSE_PASSWORD: ci
     steps:
       - uses: actions/checkout@v7
 
