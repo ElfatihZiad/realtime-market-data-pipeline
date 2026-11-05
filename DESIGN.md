@@ -108,14 +108,20 @@ Prometheus/Grafana, OTel traces. Metrics that matter: end-to-end latency,
 consumer lag, bars emitted vs. expected, late-record count, decode failures.
 *Exit: a p99 latency dashboard, and a lag alert that fires when a consumer is paused.*
 
-**Phase 5 — portfolio surface.** Next.js dashboard, hosted and public. README
-with the demo link first. Regenerated architecture diagram (the current one in
-`images/` still shows ZooKeeper). Delete `legacy/`.
-*Exit: a stranger clicks a URL and watches live data without cloning anything.*
+**Phase 5 — sentiment, integration tests, docs. Done.**
+A stream-to-stream window join of news sentiment against price bars, with a
+pluggable scorer — VADER by default so it runs keyless, Claude when a key is
+present ([ADR 0017](docs/adr/0017-sentiment-window-join.md)). Testcontainers
+integration tests that run the shipped ClickHouse schema against a real server
+and assert OHLCV follows event time rather than insertion order. README rebuilt
+around Mermaid diagrams. `legacy/` and the 2021 screenshots deleted.
 
-**Phase 6 — differentiator.** Streaming news sentiment joined to price moves: a
-windowed stream-to-stream join with watermarks on both sides. One differentiator
-done well, not three half-finished.
+*Not done:* a **hosted public demo**. It needs accounts and a deploy target
+that only the repo's owner can provide; the stack runs locally in one command.
+
+**Phase 6 — hosted demo.** The one thing left: a public URL running a thin
+always-on slice (one ingest process → ClickHouse dev tier → FastAPI → static
+frontend), with Flink run locally and on demand. See *Cost* below.
 
 ## Deliberately not doing
 

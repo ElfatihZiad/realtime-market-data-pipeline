@@ -19,13 +19,48 @@ minutes:
 
 from __future__ import annotations
 
+import os
 import sys
 
 import clickhouse_connect
+import httpx
 from mdp_core import get_settings
 
 # Compare only windows that are closed and settled.
 SKIP_RECENT_MINUTES = 2
+FLINK_REST = os.environ.get("FLINK_REST_URL", "http://localhost:8081")
+
+
+BARS_JOB = "mdp-bars"
+
+
+def job_start_times_ms() -> list[int]:
+    """When the currently-running bar-producing job(s) started.
+
+    Only the bars job matters here: it is what produced the rows being
+    compared. Keying off every running job (the Iceberg sink, the sentiment
+    join) would push the comparison window forward for reasons that have
+    nothing to do with bars.
+
+    A job reading from latest-offset joins its first window part-way through,
+    so that window's bar is incomplete by construction while the replay sees
+    every tick ClickHouse stored. Asking Flink when its jobs started is exact;
+    inferring it from gaps in the bar sequence is not — a restart whose
+    neighbouring windows still produced bars slips straight through, which is
+    how this check failed after the jobs were resubmitted a few times.
+    """
+    try:
+        jobs = httpx.get(f"{FLINK_REST}/jobs/overview", timeout=10).json()["jobs"]
+    except (httpx.HTTPError, KeyError, ValueError):
+        print("warning: could not reach Flink to find job start times")
+        return []
+    return sorted(
+        int(j["start-time"])
+        for j in jobs
+        if j["state"] in ("RUNNING", "RESTARTING") and j["name"] == BARS_JOB
+    )
+
+
 PRICE_TOLERANCE = 1e-6
 VOLUME_TOLERANCE = 1e-6
 
@@ -39,6 +74,23 @@ def main() -> int:
         password=s.clickhouse_password,
     )
 
+    starts = job_start_times_ms()
+    if not starts:
+        print(f"FAIL: no running {BARS_JOB} job — start it with `just stream`")
+        return 1
+
+    # Compare only what the CURRENTLY RUNNING jobs produced.
+    #
+    # Flink's REST API only reports jobs it still knows about, so a window
+    # belonging to a job that has since been cancelled cannot be identified as
+    # a partial-startup window — and after a jobmanager restart that history is
+    # gone entirely. Rather than guess at those, the comparison starts from the
+    # first full minute after the newest job began: every window in that range
+    # was produced start-to-finish by a job that is still running.
+    first_full_window_ms = ((max(starts) // 60_000) + 1) * 60_000
+    restarts = [(t // 60_000) * 60_000 for t in starts]
+    print(f"comparing windows from {first_full_window_ms} onward")
+
     rows = ch.query(
         """
         WITH
@@ -48,24 +100,24 @@ def main() -> int:
                 FROM market.bars
                 WHERE bar_interval = '1m'
                   AND window_start < now() - toIntervalMinute({skip:UInt8})
-                  -- Only compare windows the job was already running through.
+                  -- Only compare windows the CURRENTLY RUNNING jobs produced
+                  -- from start to finish.
                   --
-                  -- The source starts at latest-offset, so the first window
-                  -- after any start or restart is joined part-way through:
-                  -- Flink's bar is incomplete by construction while the replay
-                  -- sees every tick ClickHouse stored. That is not a defect,
-                  -- but it is not comparable either.
+                  -- A source starting at latest-offset joins its first window
+                  -- part-way through, so that bar is incomplete by
+                  -- construction while the replay sees every tick ClickHouse
+                  -- stored. Not a defect, but not comparable either.
                   --
-                  -- A restart shows up as a GAP in the bar sequence, so the
-                  -- test is "did this instrument also produce a bar for the
-                  -- preceding minute". Excluding only the single earliest
-                  -- window is not enough — every restart creates another
-                  -- partial one, which is how this check first failed.
-                  AND (instrument_id, window_start - INTERVAL 1 MINUTE) IN (
-                      SELECT instrument_id, window_start
-                      FROM market.bars
-                      WHERE bar_interval = '1m'
-                  )
+                  -- Two earlier attempts at this were wrong. Excluding only
+                  -- the single earliest window missed every later restart.
+                  -- Excluding windows not preceded by a bar missed restarts
+                  -- whose neighbouring windows still produced bars. Asking
+                  -- Flink when its jobs actually started is exact — and
+                  -- anything older than the newest job belongs to a job that
+                  -- is gone, whose startup windows can no longer be
+                  -- identified at all, so it is out of scope.
+                  AND toUnixTimestamp64Milli(window_start) >= {since:Int64}
+                  AND toUnixTimestamp64Milli(window_start) NOT IN {restarts:Array(Int64)}
             ),
             -- the same windows recomputed from stored ticks, minus the trades
             -- Flink was right to exclude
@@ -96,11 +148,15 @@ def main() -> int:
           ON f.instrument_id = r.instrument_id AND f.window_start = r.window_start
         ORDER BY f.window_start, f.instrument_id
         """,
-        parameters={"skip": SKIP_RECENT_MINUTES},
+        parameters={
+            "skip": SKIP_RECENT_MINUTES,
+            "since": first_full_window_ms,
+            "restarts": restarts,
+        },
     ).result_rows
 
     if not rows:
-        print("FAIL: no settled windows to compare yet — let the stream run a few minutes")
+        print("FAIL: no settled windows yet — let the stream run a few minutes after `just stream`")
         return 1
 
     mismatches: list[str] = []

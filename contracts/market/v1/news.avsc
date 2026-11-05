@@ -1,0 +1,17 @@
+{
+  "type": "record",
+  "name": "NewsItem",
+  "namespace": "market.v1",
+  "doc": "A news headline, tagged to an instrument and scored for sentiment. published_at_us is the publisher's clock and is what windowing uses; ingest_time_us is ours. sentiment is in [-1, 1], where negative is bearish.",
+  "fields": [
+    {"name": "article_id", "type": "string", "doc": "Stable hash of the URL, for de-duplication across polls."},
+    {"name": "instrument_id", "type": "string", "doc": "Which instrument the headline was matched to."},
+    {"name": "source", "type": "string"},
+    {"name": "title", "type": "string"},
+    {"name": "url", "type": "string"},
+    {"name": "published_at_us", "type": "long", "doc": "Publisher clock, epoch microseconds UTC."},
+    {"name": "ingest_time_us", "type": "long"},
+    {"name": "sentiment", "type": "double", "doc": "[-1, 1]. Negative is bearish."},
+    {"name": "scorer", "type": "string", "doc": "Which scorer produced it: vader or claude."}
+  ]
+}

@@ -145,3 +145,76 @@ SELECT
     close, log_return, realized_vol, zscore, is_spike
 FROM market.signals_queue
 WHERE length(_error) = 0;
+
+CREATE TABLE IF NOT EXISTS market.news_queue
+(
+    article_id       String,
+    instrument_id    String,
+    source           String,
+    title            String,
+    url              String,
+    published_at_us  Int64,
+    ingest_time_us   Int64,
+    sentiment        Float64,
+    scorer           String
+)
+ENGINE = Kafka
+SETTINGS
+    kafka_broker_list = 'kafka:9092',
+    kafka_topic_list  = 'news.raw',
+    kafka_group_name  = 'clickhouse-news-v1',
+    kafka_format      = 'AvroConfluent',
+    format_avro_schema_registry_url = 'http://schema-registry:8081',
+    kafka_num_consumers = 1,
+    kafka_handle_error_mode = 'stream';
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS market.news_mv TO market.news AS
+SELECT
+    article_id,
+    instrument_id,
+    source,
+    title,
+    url,
+    fromUnixTimestamp64Micro(published_at_us, 'UTC') AS published_at,
+    fromUnixTimestamp64Micro(ingest_time_us, 'UTC')  AS ingest_time,
+    sentiment,
+    scorer
+FROM market.news_queue
+WHERE length(_error) = 0;
+
+CREATE TABLE IF NOT EXISTS market.sentiment_queue
+(
+    instrument_id    String,
+    window_start_ms  Int64,
+    window_end_ms    Int64,
+    articles         Int64,
+    avg_sentiment    Float64,
+    min_sentiment    Float64,
+    max_sentiment    Float64,
+    open             Float64,
+    close            Float64,
+    return_pct       Float64,
+    volume           Float64,
+    trades           Int64
+)
+ENGINE = Kafka
+SETTINGS
+    kafka_broker_list = 'kafka:9092',
+    kafka_topic_list  = 'sentiment.5m',
+    kafka_group_name  = 'clickhouse-sentiment-v1',
+    kafka_format      = 'AvroConfluent',
+    format_avro_schema_registry_url = 'http://schema-registry:8081',
+    kafka_num_consumers = 1,
+    kafka_handle_error_mode = 'stream';
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS market.sentiment_mv TO market.sentiment AS
+SELECT
+    instrument_id,
+    fromUnixTimestamp64Milli(window_start_ms, 'UTC') AS window_start,
+    fromUnixTimestamp64Milli(window_end_ms, 'UTC')   AS window_end,
+    toUInt64(articles)                               AS articles,
+    avg_sentiment, min_sentiment, max_sentiment,
+    open, close, return_pct, volume,
+    toUInt64(trades)                                 AS trades
+FROM market.sentiment_queue
+WHERE length(_error) = 0;

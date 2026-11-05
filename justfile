@@ -29,6 +29,10 @@ down:
 ingest:
     uv run --package ingest-crypto python -m ingest_crypto
 
+# Poll crypto news RSS, score sentiment, produce to Kafka
+news:
+    uv run --package ingest-news python -m ingest_news
+
 # Run the API + dashboard
 api:
     uv run --package api uvicorn api.main:app --reload --port 8000
@@ -46,8 +50,9 @@ schema:
 schema-reset:
     #!/usr/bin/env bash
     set -euo pipefail
-    for t in ticks_mv ticks_errors_mv bars_mv ticks_late_mv signals_mv \
-             ticks_queue bars_queue ticks_late_queue signals_queue; do
+    for t in news_mv sentiment_mv ticks_mv ticks_errors_mv bars_mv ticks_late_mv signals_mv \
+             ticks_queue bars_queue ticks_late_queue signals_queue \
+             news_queue sentiment_queue; do
         docker compose exec -T clickhouse clickhouse-client \
             --query "DROP TABLE IF EXISTS market.$t" 
     done
@@ -67,7 +72,7 @@ flink-sql script:
         ./bin/sql-client.sh -f /opt/sql/{{script}}
 
 # Submit every streaming job
-stream: stream-stop (flink-sql "10_bars.sql") (flink-sql "20_signals.sql") (flink-sql "30_iceberg.sql")
+stream: stream-stop (flink-sql "10_bars.sql") (flink-sql "20_signals.sql") (flink-sql "30_iceberg.sql") (flink-sql "40_sentiment.sql")
 
 # Cancel every running job first. Submitting twice leaves two jobs writing the
 # same Iceberg table and the same Kafka topics, which duplicates rows.

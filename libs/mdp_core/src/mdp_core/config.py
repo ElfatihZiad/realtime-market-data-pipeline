@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     ticks_dlq_topic: str = "ticks.dlq"
     ticks_late_topic: str = "ticks.late"
     bars_topic: str = "bars.1m"
+    news_topic: str = "news.raw"
     schema_registry_url: str = "http://localhost:18081"
 
     # ClickHouse
@@ -32,6 +33,11 @@ class Settings(BaseSettings):
     # Feeds
     crypto_symbols: str = "BTC-USD,ETH-USD,SOL-USD"
     coinbase_ws_url: str = "wss://ws-feed.exchange.coinbase.com"
+
+    # News and sentiment
+    sentiment_scorer: str = "vader"  # vader | claude
+    news_poll_seconds: int = 300
+    news_metrics_port: int = 9101
 
     # Batch sources
     fred_api_key: str = ""
