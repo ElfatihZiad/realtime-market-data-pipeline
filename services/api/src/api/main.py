@@ -13,25 +13,60 @@ from pathlib import Path
 from typing import Any
 
 import structlog
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Query, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from mdp_core import configure_logging, get_settings
+from mdp_core import configure_logging, configure_tracing, get_settings
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 
 from api import store
 
 log = structlog.get_logger("api")
 STATIC_DIR = Path(__file__).parent / "static"
 
+REQUESTS = Counter("mdp_api_requests_total", "API requests", ["path", "status"])
+REQUEST_SECONDS = Histogram(
+    "mdp_api_request_seconds",
+    "API request duration",
+    ["path"],
+    buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0),
+)
+WS_CLIENTS = Counter("mdp_api_ws_connections_total", "WebSocket connections accepted")
+
 
 @contextlib.asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    configure_logging(get_settings().log_level)
+    settings = get_settings()
+    configure_logging(settings.log_level)
+    configure_tracing("api")
     log.info("api_started")
     yield
 
 
 app = FastAPI(title="Market Data Pipeline", version="0.2.0", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def record_metrics(request: Request, call_next):  # type: ignore[no-untyped-def]
+    """Label by ROUTE, not by raw path.
+
+    Using request.url.path would create a distinct time series per instrument
+    id and blow up cardinality — the classic way to take down a Prometheus.
+    """
+    import time as _time
+
+    started = _time.perf_counter()
+    response = await call_next(request)
+    route = request.scope.get("route")
+    label = getattr(route, "path", "unmatched")
+    REQUEST_SECONDS.labels(path=label).observe(_time.perf_counter() - started)
+    REQUESTS.labels(path=label, status=str(response.status_code)).inc()
+    return response
+
+
+@app.get("/metrics")
+def metrics() -> Response:
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/api/health")
@@ -61,8 +96,20 @@ def get_bars(
 ) -> list[dict[str, Any]]:
     bars = store.bars_1m(store.get_client(), instrument_id, minutes)
     if not bars:
-        raise HTTPException(404, f"no bars for {instrument_id} in the last {minutes}m")
+        raise HTTPException(
+            404,
+            f"no closed bars for {instrument_id} in the last {minutes}m — "
+            "is the Flink job running? (just stream)",
+        )
     return bars
+
+
+@app.get("/api/signals")
+def get_signals(
+    instrument_id: str = Query(min_length=1, max_length=32),
+    minutes: int = Query(default=240, ge=1, le=10_080),
+) -> list[dict[str, Any]]:
+    return store.signals(store.get_client(), instrument_id, minutes)
 
 
 @app.get("/api/ticks")
@@ -81,6 +128,7 @@ async def ws_ticks(websocket: WebSocket, instrument_id: str = "BTC-USD") -> None
     Flink-produced bars topic directly, which removes this poll.
     """
     await websocket.accept()
+    WS_CLIENTS.inc()
     client = store.get_client()
     cursor: str | None = None
     try:

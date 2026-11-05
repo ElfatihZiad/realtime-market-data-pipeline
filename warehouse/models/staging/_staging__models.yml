@@ -1,0 +1,36 @@
+version: 2
+
+models:
+  - name: stg_ticks
+    description: Trades, typed, with late arrivals flagged rather than dropped.
+    columns:
+      - name: instrument_id
+        tests: [not_null]
+      - name: event_time
+        tests: [not_null]
+      - name: price
+        tests: [not_null]
+      - name: was_late
+        tests: [not_null]
+
+  - name: stg_bars
+    description: Event-time OHLCV bars, deduplicated.
+    columns:
+      - name: instrument_id
+        tests: [not_null]
+      - name: bar_interval
+        tests:
+          - not_null
+          - accepted_values: {values: ["1m", "5m"]}
+      - name: window_start
+        tests: [not_null]
+      - name: trades
+        tests: [not_null]
+
+  - name: stg_signals
+    description: Realized volatility and spike detection per bar.
+    columns:
+      - name: instrument_id
+        tests: [not_null]
+      - name: bar_end
+        tests: [not_null]

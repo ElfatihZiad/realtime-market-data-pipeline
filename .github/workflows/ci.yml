@@ -13,27 +13,19 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10.3.3
         with:
           enable-cache: true
 
       - name: Sync workspace
         run: uv sync --all-packages
 
-      # Generated contract code is gitignored; it is regenerated from
-      # contracts/ so the committed .proto stays the single source of truth.
-      - name: Generate contract code
-        run: |
-          mkdir -p libs/mdp_core/src/mdp_core/gen
-          uv run python -m grpc_tools.protoc \
-            -I contracts \
-            --python_out=libs/mdp_core/src/mdp_core/gen \
-            --pyi_out=libs/mdp_core/src/mdp_core/gen \
-            contracts/market/v1/tick.proto
-          find libs/mdp_core/src/mdp_core/gen -type d -exec touch {}/__init__.py \;
+      # No code generation step: the Avro schemas in contracts/ are read at
+      # runtime by the producer and resolved from the schema registry by Flink
+      # and ClickHouse. See docs/adr/0008-avro-and-schema-registry-over-protobuf.md.
 
       - name: Lint
         run: |
@@ -46,5 +38,57 @@ jobs:
       - name: Test
         run: uv run pytest -q
 
-  # Phase 4 adds a second job here: integration tests against real Kafka and
+  # The warehouse models are SQL, so the only honest way to check them is
+  # against a real ClickHouse. This creates the tables and runs `dbt build`
+  # against an empty database: it proves every model compiles and executes and
+  # every test runs, without needing a broker or a live feed.
+  warehouse:
+    runs-on: ubuntu-latest
+    services:
+      clickhouse:
+        image: clickhouse/clickhouse-server:26.9
+        ports:
+          - 8123:8123
+        # CLICKHOUSE_USER/PASSWORD are not optional here. With neither set the
+        # image logs "disabling network access for user 'default'" and every
+        # request over the port returns 401 — which is exactly how this job
+        # first failed. The value is a throwaway for an ephemeral container
+        # that exists for the length of one job and is reachable only from it.
+        env:
+          CLICKHOUSE_DB: market
+          CLICKHOUSE_USER: default
+          CLICKHOUSE_PASSWORD: ci
+        options: >-
+          --health-cmd "clickhouse-client --password ci --query 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      CLICKHOUSE_HOST: localhost
+      CLICKHOUSE_PORT: "8123"
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ci
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+
+      - name: Sync workspace
+        run: uv sync --all-packages
+
+      # Only the MergeTree tables; the Kafka engine tables in 02-streaming.sql
+      # need a broker and a schema registry that do not exist in CI.
+      - name: Create warehouse tables
+        run: uv run python infra/clickhouse/apply_schema.py infra/clickhouse/init/01-tables.sql
+
+      - name: dbt build
+        working-directory: warehouse
+        env:
+          DBT_PROFILES_DIR: .
+        run: uv run dbt build --no-use-colors
+
+  # Phase 4 adds a third job here: integration tests against real Kafka and
   # ClickHouse via testcontainers.

@@ -1,0 +1,22 @@
+name: mdp
+version: "0.3.0"
+config-version: 2
+profile: mdp
+
+model-paths: ["models"]
+test-paths: ["tests"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  mdp:
+    # Silver: typed, cleaned reads over the raw ClickHouse tables. Views,
+    # because they are cheap and always current.
+    staging:
+      +materialized: view
+      +schema: staging
+    # Gold: the things people actually query. Tables, because they are read
+    # far more often than they are written.
+    marts:
+      +materialized: table
+      +schema: marts

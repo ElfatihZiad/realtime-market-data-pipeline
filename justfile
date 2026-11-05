@@ -7,26 +7,20 @@ default:
 install:
     uv sync --all-packages
 
-# Generate Python code from the proto contracts
-codegen:
-    mkdir -p libs/mdp_core/src/mdp_core/gen
-    uv run python -m grpc_tools.protoc \
-        -I contracts \
-        --python_out=libs/mdp_core/src/mdp_core/gen \
-        --pyi_out=libs/mdp_core/src/mdp_core/gen \
-        contracts/market/v1/tick.proto
-    touch libs/mdp_core/src/mdp_core/gen/__init__.py
-    find libs/mdp_core/src/mdp_core/gen -type d -exec touch {}/__init__.py \;
-    # Stage the contracts where ClickHouse decodes the Kafka topic from them.
-    rm -rf infra/clickhouse/format_schemas
-    mkdir -p infra/clickhouse/format_schemas
-    cp -R contracts/. infra/clickhouse/format_schemas/
-
 # Bring up the full local stack
-up: codegen
+up:
+    # Build the Flink image first: both Flink services share the tag, and
+    # letting `up --build` do it builds the same tag twice in parallel.
+    docker compose build flink-jobmanager
     docker compose up -d --wait
-    @echo "ClickHouse  http://localhost:8123/play"
-    @echo "Kafka UI    http://localhost:8080"
+    @echo "Dashboard        http://localhost:8000   (just api)"
+    @echo "Grafana          http://localhost:3000   (anonymous viewer)"
+    @echo "Prometheus       http://localhost:9090"
+    @echo "Jaeger           http://localhost:16686"
+    @echo "Flink UI         http://localhost:8081"
+    @echo "Airflow          http://localhost:8082"
+    @echo "ClickHouse       http://localhost:8123/play"
+    @echo "Schema Registry  http://localhost:18081/subjects"
 
 down:
     docker compose down -v
@@ -38,6 +32,92 @@ ingest:
 # Run the API + dashboard
 api:
     uv run --package api uvicorn api.main:app --reload --port 8000
+
+# (Re)apply the ClickHouse schema. The init scripts in the image only run on an
+# empty data volume, so this is how a schema change reaches a running stack.
+schema:
+    uv run python infra/clickhouse/apply_schema.py \
+        infra/clickhouse/init/01-tables.sql \
+        infra/clickhouse/init/02-streaming.sql
+    @echo "schema applied"
+
+# Drop and recreate the Kafka engine tables and their views. Needed when their
+# SETTINGS change, which CREATE ... IF NOT EXISTS will not do.
+schema-reset:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for t in ticks_mv ticks_errors_mv bars_mv ticks_late_mv signals_mv \
+             ticks_queue bars_queue ticks_late_queue signals_queue; do
+        docker compose exec -T clickhouse clickhouse-client \
+            --query "DROP TABLE IF EXISTS market.$t" 
+    done
+    just schema
+
+# Wipe the Iceberg warehouse AND its catalog together. They are one unit of
+# state: clearing either alone leaves dangling metadata pointers.
+lake-reset:
+    docker compose rm -sf iceberg-rest s3mock s3mock-init
+    docker volume rm -f mdp_iceberg-warehouse mdp_iceberg-catalog
+    docker compose up -d --wait s3mock s3mock-init iceberg-rest
+    @echo "lake reset — resubmit the Flink jobs with `just stream`"
+
+# Submit a Flink SQL script (detached). e.g. `just flink-sql 10_bars.sql`
+flink-sql script:
+    docker compose exec -T flink-jobmanager \
+        ./bin/sql-client.sh -f /opt/sql/{{script}}
+
+# Submit every streaming job
+stream: stream-stop (flink-sql "10_bars.sql") (flink-sql "20_signals.sql") (flink-sql "30_iceberg.sql")
+
+# Cancel every running job first. Submitting twice leaves two jobs writing the
+# same Iceberg table and the same Kafka topics, which duplicates rows.
+stream-stop:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for jid in $(curl -s http://localhost:8081/jobs/overview \
+        | python3 -c "import sys,json;[print(j['jid']) for j in json.load(sys.stdin)['jobs'] if j['state'] in ('RUNNING','RESTARTING')]"); do
+        curl -s -o /dev/null -X PATCH "http://localhost:8081/jobs/$jid?mode=cancel"
+        echo "cancelled $jid"
+    done
+    sleep 5
+
+# What is running on the cluster
+flink-jobs:
+    docker compose exec -T flink-jobmanager ./bin/flink list
+
+# Schemas currently registered
+schemas:
+    @curl -s http://localhost:18081/subjects | python3 -m json.tool
+
+# Prove the late-data path: inject a trade behind the watermark and check it
+# is recorded rather than dropped, and that no closed bar changed.
+check-late:
+    uv run --package ingest-crypto python stream/tests/late_data_check.py
+
+# Reconcile Flink's bars against the same windows recomputed from stored ticks.
+check-bars:
+    uv run --package ingest-crypto python stream/tests/bar_reconciliation.py
+
+# Both streaming correctness checks
+verify: check-late check-bars
+
+# Load SEC EDGAR company facts
+edgar:
+    uv run --package batch python -m batch.edgar
+
+# Load FRED macro series (skips cleanly without FRED_API_KEY)
+fred:
+    uv run --package batch python -m batch.fred
+
+# Build the dbt marts
+dbt-build:
+    cd warehouse && DBT_PROFILES_DIR=. uv run dbt build
+
+dbt-test:
+    cd warehouse && DBT_PROFILES_DIR=. uv run dbt test
+
+dbt-docs:
+    cd warehouse && DBT_PROFILES_DIR=. uv run dbt docs generate
 
 lint:
     uv run ruff check .

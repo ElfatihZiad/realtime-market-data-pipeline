@@ -1,0 +1,12 @@
+-- high must be the highest and low the lowest, and open/close must sit
+-- between them. If windowing or the open/close ordering invariant breaks,
+-- this is where it shows up.
+select
+    instrument_id,
+    bar_interval,
+    window_start,
+    open, high, low, close
+from {{ ref('stg_bars') }}
+where high < low
+   or open > high or open < low
+   or close > high or close < low

@@ -1,0 +1,52 @@
+# SLOs, written as rules rather than prose.
+#
+# A service level objective nobody evaluates is a sentence in a README. These
+# fire, which means they can also be wrong, which means they get fixed.
+
+groups:
+  - name: mdp-slos
+    rules:
+      # SLO 1: a trade reaches the warehouse within 1s at p99.
+      - alert: EndToEndLatencyHigh
+        expr: histogram_quantile(0.99, sum(rate(mdp_feed_latency_seconds_bucket[5m])) by (le)) > 1
+        for: 5m
+        labels: {severity: warning, slo: latency}
+        annotations:
+          summary: "p99 venue-to-ingest latency above 1s for 5m"
+
+      # SLO 2: consumers keep up. Sustained lag means bars are being produced
+      # later than they are being consumed, and the dashboard is behind.
+      - alert: ConsumerLagGrowing
+        expr: sum(kafka_consumergroup_lag) by (consumergroup) > 50000
+        for: 10m
+        labels: {severity: warning, slo: freshness}
+        annotations:
+          summary: "Consumer group {{ $labels.consumergroup }} is more than 50k messages behind"
+
+      # SLO 3: the feed is actually delivering. Silence is indistinguishable
+      # from a healthy-but-idle pipeline unless you alert on it.
+      - alert: NoTicksIngested
+        expr: sum(rate(mdp_ticks_ingested_total[5m])) == 0
+        for: 5m
+        labels: {severity: critical, slo: availability}
+        annotations:
+          summary: "No trades ingested for 5m — feed down or disconnected"
+
+      # SLO 4: malformed input is rare. A spike means the venue changed its
+      # payload and the contract no longer matches.
+      - alert: DlqRateHigh
+        expr: |
+          sum(rate(mdp_ticks_rejected_total[5m]))
+            / clamp_min(sum(rate(mdp_ticks_ingested_total[5m])), 0.001) > 0.01
+        for: 10m
+        labels: {severity: warning, slo: correctness}
+        annotations:
+          summary: "More than 1% of feed messages are being rejected to the DLQ"
+
+      # Reconnect storms usually precede a lag problem.
+      - alert: FeedReconnectStorm
+        expr: increase(mdp_feed_reconnects_total[10m]) > 5
+        for: 1m
+        labels: {severity: warning, slo: availability}
+        annotations:
+          summary: "Feed reconnected more than 5 times in 10 minutes"

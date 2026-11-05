@@ -1,0 +1,15 @@
+# Local dev profile. Credentials come from the environment, never from here.
+mdp:
+  target: dev
+  outputs:
+    dev:
+      type: clickhouse
+      host: "{{ env_var('CLICKHOUSE_HOST', 'localhost') }}"
+      port: "{{ env_var('CLICKHOUSE_PORT', '8123') | int }}"
+      user: "{{ env_var('CLICKHOUSE_USER', 'default') }}"
+      password: "{{ env_var('CLICKHOUSE_PASSWORD', '') }}"
+      schema: market
+      secure: False
+      driver: http
+      connect_timeout: 10
+      send_receive_timeout: 300

@@ -13,7 +13,7 @@ import datetime as dt
 import json
 from typing import Any
 
-from mdp_core.gen.market.v1 import tick_pb2
+from mdp_core import Tick
 
 
 class MalformedMessage(Exception):
@@ -38,7 +38,7 @@ def _parse_rfc3339_us(value: str) -> int:
     return int(parsed.timestamp() * 1_000_000)
 
 
-def to_tick(raw: dict[str, Any], *, ingest_time_us: int) -> tick_pb2.Tick:
+def to_tick(raw: dict[str, Any], *, ingest_time_us: int) -> Tick:
     """Map one Coinbase `match` message onto the canonical Tick.
 
     Raises MalformedMessage rather than returning a zero-filled row. The old
@@ -56,7 +56,7 @@ def to_tick(raw: dict[str, Any], *, ingest_time_us: int) -> tick_pb2.Tick:
     if price <= 0 or size <= 0:
         raise MalformedMessage(f"non-positive price/size: price={price} size={size}")
 
-    return tick_pb2.Tick(
+    return Tick(
         instrument_id=instrument_id,
         venue="coinbase",
         event_time_us=event_time_us,

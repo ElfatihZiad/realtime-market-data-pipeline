@@ -13,11 +13,6 @@ dist/
 build/
 *.egg-info/
 
-# Generated code (regenerate with `just codegen`)
-libs/mdp_core/src/mdp_core/gen/
-web/src/gen/
-infra/clickhouse/format_schemas/
-
 # Secrets & local config — NEVER commit
 .env
 .env.*
@@ -26,6 +21,12 @@ infra/clickhouse/format_schemas/
 *.key
 OAuth.json
 credentials.json
+
+# dbt build artifacts — regenerated on every run, never reviewable
+warehouse/target/
+warehouse/logs/
+warehouse/dbt_packages/
+.user.yml
 
 # Node
 node_modules/

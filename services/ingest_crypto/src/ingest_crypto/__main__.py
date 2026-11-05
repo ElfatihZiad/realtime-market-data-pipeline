@@ -13,7 +13,7 @@ from typing import Any
 
 import structlog
 import websockets
-from mdp_core import configure_logging, get_settings
+from mdp_core import configure_logging, configure_tracing, get_settings, tracer
 from prometheus_client import Counter, Histogram, start_http_server
 from websockets.asyncio.client import connect
 
@@ -21,6 +21,7 @@ from ingest_crypto.coinbase import MalformedMessage, is_trade, subscribe_frame, 
 from ingest_crypto.producer import TickProducer
 
 log = structlog.get_logger("ingest_crypto")
+_tracer = None
 
 TICKS = Counter("mdp_ticks_ingested_total", "Ticks accepted and produced", ["instrument_id"])
 REJECTED = Counter("mdp_ticks_rejected_total", "Messages routed to the DLQ", ["reason"])
@@ -71,20 +72,34 @@ async def _pump(ws: Any, producer: TickProducer) -> None:
             log.warning("malformed_tick", error=str(exc))
             continue
 
-        producer.send_tick(tick.instrument_id, tick.SerializeToString())
+        if _tracer is None:
+            producer.send_tick(tick)
+        else:
+            # One span per trade would be millions of spans an hour and tell
+            # you nothing new. The span covers the produce call, which is the
+            # hop that can actually block.
+            with _tracer.start_as_current_span("produce_tick") as span:
+                span.set_attribute("instrument_id", tick.instrument_id)
+                span.set_attribute("venue", tick.venue)
+                span.set_attribute("latency_us", tick.latency_us)
+                producer.send_tick(tick)
         TICKS.labels(instrument_id=tick.instrument_id).inc()
-        FEED_LATENCY.observe((tick.ingest_time_us - tick.event_time_us) / 1_000_000)
+        FEED_LATENCY.observe(tick.latency_us / 1_000_000)
 
 
 async def run() -> None:
+    global _tracer
     settings = get_settings()
     configure_logging(settings.log_level)
+    if configure_tracing("ingest-crypto"):
+        _tracer = tracer("ingest_crypto")
     start_http_server(settings.metrics_port)
 
     producer = TickProducer(
         bootstrap=settings.kafka_bootstrap,
         topic=settings.ticks_topic,
         dlq_topic=settings.ticks_dlq_topic,
+        schema_registry_url=settings.schema_registry_url,
     )
 
     loop = asyncio.get_running_loop()
@@ -96,6 +111,7 @@ async def run() -> None:
         url=settings.coinbase_ws_url,
         symbols=settings.symbols,
         kafka=settings.kafka_bootstrap,
+        schema_registry=settings.schema_registry_url,
         metrics_port=settings.metrics_port,
     )
 
