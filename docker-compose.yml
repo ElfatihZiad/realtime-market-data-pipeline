@@ -52,7 +52,7 @@ services:
     command:
       - |
         set -e
-        for t in ticks.raw ticks.dlq ticks.late bars.1m bars.5m signals.1m; do
+        for t in ticks.raw ticks.dlq ticks.late bars.1m bars.5m signals.1m news.raw sentiment.5m; do
           /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 \
             --create --if-not-exists --topic "$$t" --partitions 3 --replication-factor 1
         done

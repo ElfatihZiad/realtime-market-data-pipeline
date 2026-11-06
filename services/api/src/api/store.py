@@ -89,6 +89,54 @@ def signals(client: Client, instrument_id: str, minutes: int) -> list[dict[str, 
     ]
 
 
+def news(client: Client, instrument_id: str, limit: int) -> list[dict[str, Any]]:
+    result = client.query(
+        """
+        SELECT published_at, source, title, url, sentiment, scorer
+        FROM market.news FINAL
+        WHERE instrument_id = {instrument_id:String}
+        ORDER BY published_at DESC
+        LIMIT {limit:UInt32}
+        """,
+        parameters={"instrument_id": instrument_id, "limit": limit},
+    )
+    return [
+        {
+            "published_at": r[0].isoformat(),
+            "source": r[1],
+            "title": r[2],
+            "url": r[3],
+            "sentiment": r[4],
+            "scorer": r[5],
+        }
+        for r in result.result_rows
+    ]
+
+
+def sentiment_windows(client: Client, instrument_id: str, hours: int) -> list[dict[str, Any]]:
+    """Windows where BOTH news and trades existed — the Flink join's output."""
+    result = client.query(
+        """
+        SELECT window_start, articles, avg_sentiment, return_pct, trades
+        FROM market.sentiment FINAL
+        WHERE instrument_id = {instrument_id:String}
+          AND window_start >= now() - toIntervalHour({hours:UInt32})
+        ORDER BY window_start
+        """,
+        parameters={"instrument_id": instrument_id, "hours": hours},
+    )
+    return [
+        {
+            "window_start": r[0].isoformat(),
+            "articles": r[1],
+            "avg_sentiment": r[2],
+            "return_pct": r[3],
+            "trades": r[4],
+        }
+        for r in result.result_rows
+    ]
+
+
 def recent_ticks(
     client: Client, instrument_id: str, since_iso: str | None, limit: int
 ) -> list[dict[str, Any]]:
@@ -152,6 +200,8 @@ def pipeline_stats(client: Client) -> dict[str, Any]:
     late = client.query(
         "SELECT count(), coalesce(max(lateness_ms), 0) FROM market.ticks_late"
     ).result_rows[0]
+    news_count = client.query("SELECT count() FROM market.news").result_rows[0][0]
+    sentiment_count = client.query("SELECT count() FROM market.sentiment").result_rows[0][0]
     spikes = client.query("SELECT countIf(is_spike) FROM market.signals").result_rows[0][0]
     return {
         "ticks": r[0],
@@ -165,4 +215,6 @@ def pipeline_stats(client: Client) -> dict[str, Any]:
         "late_trades": late[0],
         "max_lateness_ms": late[1],
         "spikes": spikes,
+        "news": news_count,
+        "sentiment_windows": sentiment_count,
     }

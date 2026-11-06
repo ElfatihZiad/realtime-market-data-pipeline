@@ -90,5 +90,22 @@ jobs:
           DBT_PROFILES_DIR: .
         run: uv run dbt build --no-use-colors
 
-  # Phase 4 adds a third job here: integration tests against real Kafka and
-  # ClickHouse via testcontainers.
+  # The warehouse layer is SQL, and SQL is only correct against the engine that
+  # runs it. This spins a real ClickHouse via testcontainers, applies the
+  # shipped schema file, and asserts the bar view computes the OHLCV a human
+  # would — including that open/close follow event time, not insertion order.
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+
+      - name: Sync workspace
+        run: uv sync --all-packages
+
+      - name: Integration tests
+        run: uv run pytest tests/ -m integration -q

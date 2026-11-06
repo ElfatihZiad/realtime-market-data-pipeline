@@ -12,6 +12,7 @@ mdp-core = { workspace = true }
 
 [dependency-groups]
 dev = [
+    "testcontainers>=4.9",
     "dbt-core>=1.9",
     "dbt-clickhouse>=1.9",
     "pytest>=8.3",
@@ -23,7 +24,7 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py313"
-extend-exclude = ["legacy", "**/gen/**"]
+extend-exclude = ["**/gen/**"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "BLE", "ASYNC", "RUF"]
@@ -31,13 +32,18 @@ select = ["E", "F", "I", "UP", "B", "BLE", "ASYNC", "RUF"]
 [tool.mypy]
 python_version = "3.13"
 strict = true
-exclude = ["legacy/", ".*/gen/.*"]
+exclude = [".*/gen/.*"]
 
 [[tool.mypy.overrides]]
-module = ["confluent_kafka.*", "clickhouse_connect.*"]
+module = ["confluent_kafka.*", "clickhouse_connect.*", "vaderSentiment.*", "anthropic.*"]
 ignore_missing_imports = true
 follow_imports = "skip"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# `tests/` holds integration tests that need Docker; they are opt-in via
+# `-m integration` so the default run stays fast and hermetic.
 testpaths = ["libs", "services"]
+markers = [
+    "integration: needs Docker (testcontainers). Run with: pytest tests/ -m integration",
+]

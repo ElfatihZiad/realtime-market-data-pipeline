@@ -133,3 +133,42 @@ SELECT
     count()                                       AS trades
 FROM market.ticks
 GROUP BY instrument_id, bucket;
+
+-- ───────────────────────────── news & sentiment ─────────────────────────────
+
+CREATE TABLE IF NOT EXISTS market.news
+(
+    article_id     String,
+    instrument_id  LowCardinality(String),
+    source         LowCardinality(String),
+    title          String,
+    url            String,
+    published_at   DateTime64(3, 'UTC'),
+    ingest_time    DateTime64(3, 'UTC'),
+    sentiment      Float64,
+    scorer         LowCardinality(String)
+)
+ENGINE = ReplacingMergeTree
+PARTITION BY toYYYYMM(published_at)
+ORDER BY (instrument_id, published_at, article_id);
+
+-- The windowed join of news sentiment against price, computed by Flink.
+-- Rows exist only for windows that had BOTH trades and news.
+CREATE TABLE IF NOT EXISTS market.sentiment
+(
+    instrument_id  LowCardinality(String),
+    window_start   DateTime64(3, 'UTC'),
+    window_end     DateTime64(3, 'UTC'),
+    articles       UInt64,
+    avg_sentiment  Float64,
+    min_sentiment  Float64,
+    max_sentiment  Float64,
+    open           Float64,
+    close          Float64,
+    return_pct     Float64,
+    volume         Float64,
+    trades         UInt64
+)
+ENGINE = ReplacingMergeTree
+PARTITION BY toYYYYMM(window_start)
+ORDER BY (instrument_id, window_start);

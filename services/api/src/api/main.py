@@ -112,6 +112,23 @@ def get_signals(
     return store.signals(store.get_client(), instrument_id, minutes)
 
 
+@app.get("/api/news")
+def get_news(
+    instrument_id: str = Query(min_length=1, max_length=32),
+    limit: int = Query(default=20, ge=1, le=200),
+) -> list[dict[str, Any]]:
+    return store.news(store.get_client(), instrument_id, limit)
+
+
+@app.get("/api/sentiment")
+def get_sentiment(
+    instrument_id: str = Query(min_length=1, max_length=32),
+    hours: int = Query(default=24, ge=1, le=720),
+) -> list[dict[str, Any]]:
+    """The Flink windowed join: sentiment and return, per 5m window."""
+    return store.sentiment_windows(store.get_client(), instrument_id, hours)
+
+
 @app.get("/api/ticks")
 def get_ticks(
     instrument_id: str = Query(min_length=1, max_length=32),
