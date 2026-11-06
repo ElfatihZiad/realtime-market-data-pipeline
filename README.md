@@ -22,84 +22,28 @@ just api      # → http://localhost:8000
 
 ### The streaming path
 
-```mermaid
-flowchart LR
-  CB["<b>Coinbase WS</b><br/>public · keyless · 24/7"]
-  RSS["<b>Crypto news RSS</b><br/>3 feeds"]
-
-  IC["<b>ingest-crypto</b><br/>validate · normalise"]
-  IN["<b>ingest-news</b><br/>tag · score sentiment"]
-
-  RAW[["<b>Kafka 4.3 · KRaft</b><br/>ticks.raw · news.raw"]]
-  DLQ["ticks.dlq<br/>unparseable"]
-
-  FL["<b>Flink 2.1 SQL</b><br/>event-time windows<br/>watermarks"]
-
-  DER[["<b>Kafka · derived</b><br/>bars · signals<br/>sentiment · late"]]
-
-  CH[("<b>ClickHouse</b><br/>hot")]
-  ICE[("<b>Iceberg on S3</b><br/>history")]
-
-  CB --> IC --> RAW
-  RSS --> IN --> RAW
-  IC -. malformed .-> DLQ
-  RAW --> FL
-  FL --> DER
-  FL --> ICE
-  DER --> CH
-  RAW --> CH
-
-  classDef src fill:#1f2937,stroke:#4b5563,color:#e5e7eb
-  classDef svc fill:#164e63,stroke:#0891b2,color:#e0f2fe
-  classDef bus fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff
-  classDef eng fill:#422006,stroke:#d97706,color:#fef3c7
-  classDef sink fill:#052e16,stroke:#16a34a,color:#dcfce7
-  class CB,RSS src
-  class IC,IN svc
-  class RAW,DER,DLQ bus
-  class FL eng
-  class CH,ICE sink
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/streaming-dark.svg">
+  <img alt="Streaming path: Coinbase and news feeds into ingest services, into Kafka, through Flink SQL event-time windows, out to ClickHouse and Iceberg." src="docs/diagrams/streaming-light.svg">
+</picture>
 
 ### Serving, transformation and orchestration
 
-```mermaid
-flowchart LR
-  CH[("<b>ClickHouse</b>")]
-  DBT["<b>dbt</b><br/>staging → marts<br/>33 tests"]
-  API["<b>FastAPI</b><br/>REST + WebSocket"]
-  UI["<b>Live dashboard</b>"]
-
-  SEC["SEC EDGAR"]
-  FRED["FRED"]
-  BATCH["<b>batch loaders</b>"]
-  AF["<b>Airflow 3</b><br/>batch only"]
-  ICE[("<b>Iceberg</b>")]
-  OBS["<b>Prometheus · Grafana</b><br/><b>Jaeger / OTel</b><br/>5 SLO rules"]
-
-  CH --> DBT --> API --> UI
-  SEC --> BATCH
-  FRED --> BATCH
-  BATCH --> CH
-  AF -. schedules .-> BATCH
-  AF -. schedules .-> DBT
-  AF -. snapshot expiry .-> ICE
-  API -. metrics .-> OBS
-
-  classDef store fill:#052e16,stroke:#16a34a,color:#dcfce7
-  classDef xform fill:#3b0764,stroke:#a855f7,color:#f3e8ff
-  classDef serve fill:#164e63,stroke:#0891b2,color:#e0f2fe
-  classDef orch fill:#422006,stroke:#d97706,color:#fef3c7
-  class CH,ICE store
-  class DBT,BATCH xform
-  class API,UI,OBS serve
-  class AF,SEC,FRED orch
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/serving-dark.svg">
+  <img alt="Serving and orchestration: batch loaders and ClickHouse into dbt marts, into FastAPI and the dashboard, with Airflow scheduling batch work and Prometheus, Grafana and Jaeger observing." src="docs/diagrams/serving-light.svg">
+</picture>
 
 Avro contracts in [`contracts/`](contracts/) are registered with a Schema
 Registry that every producer, every Flink job and every ClickHouse table
 resolves against — it sits behind all three stages rather than inside any one
 of them.
+
+<sub>The two diagrams above are generated: `node tools/diagrams/generate.mjs`.
+Light and dark variants, because GitHub picks by theme and one of them is
+otherwise unreadable. The remaining diagrams are Mermaid, which GitHub lays out
+itself — fine where the shape is a simple sequence, less so for an architecture
+with crossing edges.</sub>
 
 ## The idea that shapes everything: event time
 

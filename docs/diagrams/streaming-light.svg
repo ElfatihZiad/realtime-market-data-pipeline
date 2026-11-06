@@ -1,0 +1,187 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 330" width="1180" height="330" role="img" aria-label="Streaming path: Coinbase and news feeds into ingest services, into Kafka, through Flink SQL event-time windows, out to ClickHouse and Iceberg.">
+  <title>Streaming path: Coinbase and news feeds into ingest services, into Kafka, through Flink SQL event-time windows, out to ClickHouse and Iceberg.</title>
+  <path d="M 183.9 68.27 C 199.79 66.44, 215.52 70.48, 231.13 68.79" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 183.84 68.54 C 199.95 67.01, 215.44 70.91, 231.57 69.05" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 231 69 L 222.78 65.33" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 231 69 L 222.78 72.67" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 184.2 179.5 C 199.63 177.55, 214.69 178.39, 231.1 178.53" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 183.44 179.11 C 199.46 178.11, 215.64 178.61, 231.58 178.72" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 231 179 L 222.78 175.33" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 231 179 L 222.78 182.67" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 399.12 69.85 C 415.1 85.83, 429.63 103.21, 446.76 120.77" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 399.69 68.3 C 413.04 87.37, 429.37 103.81, 445.8 120.58" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 446 120 L 443.13 111.47" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 446 120 L 437.73 116.44" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 399.49 179.5 C 416.46 161.08, 429.6 140.5, 445.4 120.02" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 398.5 179.28 C 413.52 158.51, 430.69 141.17, 446.59 120.51" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 446 120 L 438.01 124.14" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 446 120 L 443.75 128.71" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 314.77 101.42 C 359.51 153.85, 401.4 206.6, 445.3 261.71" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round" stroke-dasharray="5 5"/>
+  <path d="M 446 261 L 443.61 252.32" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 446 261 L 437.94 256.99" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 603.64 119.52 C 620.09 120.44, 635.36 117.49, 650.33 120.71" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 604.01 119.3 C 619.04 119.19, 635.48 118.46, 650.95 119.83" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 651 120 L 642.78 116.33" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 651 120 L 642.78 123.67" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 829.03 119.84 C 843.5 103.67, 858.94 90.09, 876.53 75.82" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 828.87 120.71 C 842.72 103.55, 860.09 89.23, 875.72 75.03" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 876 75 L 867.53 78.03" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 876 75 L 872.6 83.33" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 739.26 164.14 C 784.73 179.84, 830.51 191.74, 875.84 207.02" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 739.79 163.2 C 785.35 177.67, 829.5 193.03, 875.98 206.63" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 876 207 L 869.27 201.02" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 876 207 L 867.06 208.02" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 1043.57 206.92 C 1047.47 185.72, 1050.56 163.2, 1051.64 140.69" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 1043.22 207.71 C 1045.68 184.92, 1048.94 163.01, 1050.48 139.34" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 1051 140 L 1046.5 147.79" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 1051 140 L 1053.8 148.55" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 1034.67 75.27 C 1039.64 96.89, 1045.82 118.35, 1050.86 140.4" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 1034.15 75.35 C 1038.13 96.36, 1044.57 117.65, 1051.42 139.25" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 1051 140 L 1052.47 131.12" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 1051 140 L 1045.37 132.98" fill="none" stroke="#57606a" stroke-width="1.4" stroke-linecap="round"/>
+  <rect x="20" y="40" width="160" height="58" rx="12" fill="#f5f0ff"/>
+  <path d="M 31.85 39.87 C 77.23 39.67, 122.06 40.87, 168.56 39.76" fill="none" stroke="#8250df" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 32.06 40 C 76.79 38.81, 122.24 39.86, 167.76 40.44" fill="none" stroke="#8250df" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 180 52.14 C 179.88 63.25, 178.39 74.47, 180.53 85.6" fill="none" stroke="#8250df" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 180.21 52.2 C 179.39 62.92, 180.54 74.39, 179.79 85.39" fill="none" stroke="#8250df" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 168.19 97.41 C 122.96 97.6, 78.28 98.95, 32.3 98.27" fill="none" stroke="#8250df" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 167.64 97.98 C 122.74 97.78, 78.65 99.81, 31.87 98.35" fill="none" stroke="#8250df" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 19.96 85.48 C 20.83 74.3, 18.86 63.73, 20.35 51.69" fill="none" stroke="#8250df" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 20.34 85.96 C 19.77 75.25, 19.22 63.9, 20.14 51.9" fill="none" stroke="#8250df" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 168 40 Q 180 40, 180 52" fill="none" stroke="#8250df" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 180 86 Q 180 98, 168 98" fill="none" stroke="#8250df" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 32 98 Q 20 98, 20 86" fill="none" stroke="#8250df" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 20 52 Q 20 40, 32 40" fill="none" stroke="#8250df" stroke-width="1.6" stroke-linecap="round"/>
+  <text x="100" y="65" text-anchor="middle" font-family='-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' font-size="12.5" font-weight="600" fill="#1f2328">Coinbase WS</text>
+  <text x="100" y="80" text-anchor="middle" font-family='-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' font-size="11" font-weight="400" fill="#57606a">public · keyless · 24/7</text>
+  <rect x="20" y="150" width="160" height="58" rx="12" fill="#f5f0ff"/>
+  <path d="M 32.05 149.71 C 76.86 149.19, 121.5 150.52, 168.63 149.6" fill="none" stroke="#8250df" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 31.55 150.5 C 77.01 148.47, 121.85 149.41, 168.58 150.21" fill="none" stroke="#8250df" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 179.89 161.9 C 180.18 173.08, 179.41 184.44, 179.67 195.8" fill="none" stroke="#8250df" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 179.84 162.34 C 180.55 173.61, 181.64 184.41, 180.27 196.39" fill="none" stroke="#8250df" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 168.16 207.39 C 123.54 207.49, 77.9 207.93, 32.2 208.32" fill="none" stroke="#8250df" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 167.75 207.98 C 122.93 208.57, 78.2 208.86, 32.29 208.38" fill="none" stroke="#8250df" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 20.18 196.17 C 19.68 185.13, 20.71 173.94, 20.14 162.63" fill="none" stroke="#8250df" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 19.92 196.08 C 18.71 184.41, 20.24 173.5, 20.52 161.44" fill="none" stroke="#8250df" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 168 150 Q 180 150, 180 162" fill="none" stroke="#8250df" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 180 196 Q 180 208, 168 208" fill="none" stroke="#8250df" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 32 208 Q 20 208, 20 196" fill="none" stroke="#8250df" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 20 162 Q 20 150, 32 150" fill="none" stroke="#8250df" stroke-width="1.6" stroke-linecap="round"/>
+  <text x="100" y="175" text-anchor="middle" font-family='-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' font-size="12.5" font-weight="600" fill="#1f2328">Crypto news RSS</text>
+  <text x="100" y="190" text-anchor="middle" font-family='-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' font-size="11" font-weight="400" fill="#57606a">3 feeds</text>
+  <rect x="235" y="40" width="160" height="58" rx="12" fill="#eef6ff"/>
+  <path d="M 247.53 39.64 C 292.12 39.56, 336.6 40.98, 382.93 40.03" fill="none" stroke="#0969da" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 247.45 39.41 C 291.78 39.16, 336.49 40.45, 383.44 39.65" fill="none" stroke="#0969da" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 395.49 52.45 C 393.93 63.51, 393.74 73.96, 395.1 86.06" fill="none" stroke="#0969da" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 395.44 52.29 C 396.38 62.81, 394.01 74.01, 395.11 86.07" fill="none" stroke="#0969da" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 383.23 97.65 C 338.37 96.38, 292.96 98.66, 246.75 97.99" fill="none" stroke="#0969da" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 383.33 97.96 C 337.98 96.86, 293.15 96.78, 247.36 97.39" fill="none" stroke="#0969da" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 235.23 85.83 C 234.57 74.39, 235.45 63.91, 235.31 51.37" fill="none" stroke="#0969da" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 234.66 85.72 C 233.29 74.47, 236.26 64.01, 235.63 51.47" fill="none" stroke="#0969da" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 383 40 Q 395 40, 395 52" fill="none" stroke="#0969da" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 395 86 Q 395 98, 383 98" fill="none" stroke="#0969da" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 247 98 Q 235 98, 235 86" fill="none" stroke="#0969da" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 235 52 Q 235 40, 247 40" fill="none" stroke="#0969da" stroke-width="1.6" stroke-linecap="round"/>
+  <text x="315" y="65" text-anchor="middle" font-family='-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' font-size="12.5" font-weight="600" fill="#1f2328">ingest-crypto</text>
+  <text x="315" y="80" text-anchor="middle" font-family='-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' font-size="11" font-weight="400" fill="#57606a">validate · normalise</text>
+  <rect x="235" y="150" width="160" height="58" rx="12" fill="#eef6ff"/>
+  <path d="M 247.14 149.91 C 292.27 150.9, 336.41 150.11, 383.62 149.74" fill="none" stroke="#0969da" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 247.2 149.45 C 291.57 148.19, 336.5 149.08, 383.27 149.55" fill="none" stroke="#0969da" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 395.33 161.67 C 394.02 173.27, 394.45 184.91, 394.77 195.37" fill="none" stroke="#0969da" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 395.23 162.37 C 393.64 172.98, 393.96 184.66, 394.96 195.48" fill="none" stroke="#0969da" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 383.43 207.78 C 338.59 206.46, 293.61 208.79, 247.58 207.56" fill="none" stroke="#0969da" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 383.1 208.14 C 338.43 207.52, 293.22 207.78, 247.41 207.47" fill="none" stroke="#0969da" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 235.54 195.81 C 236.04 184.65, 234.8 173.98, 235.33 161.57" fill="none" stroke="#0969da" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 235.14 195.75 C 236.18 184.78, 234.79 173.99, 234.58 161.53" fill="none" stroke="#0969da" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 383 150 Q 395 150, 395 162" fill="none" stroke="#0969da" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 395 196 Q 395 208, 383 208" fill="none" stroke="#0969da" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 247 208 Q 235 208, 235 196" fill="none" stroke="#0969da" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 235 162 Q 235 150, 247 150" fill="none" stroke="#0969da" stroke-width="1.6" stroke-linecap="round"/>
+  <text x="315" y="175" text-anchor="middle" font-family='-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' font-size="12.5" font-weight="600" fill="#1f2328">ingest-news</text>
+  <text x="315" y="190" text-anchor="middle" font-family='-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' font-size="11" font-weight="400" fill="#57606a">tag · score sentiment</text>
+  <rect x="450" y="88" width="150" height="64" rx="3" fill="#fff0f7"/>
+  <path d="M 452.68 87.77 C 500.46 86.65, 547.93 87.29, 597.01 88.63" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 452.8 88.56 C 500.25 87.1, 548.24 88.11, 596.61 88.54" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 600.08 90.39 C 598.79 109.67, 600.09 129.23, 600.03 149.26" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 600.39 90.79 C 600.11 110.43, 600.09 129.53, 600.3 148.86" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 596.99 152.63 C 549.47 150.97, 501.75 153.49, 453.21 151.67" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 597.09 151.62 C 549.66 153.15, 501.54 153.03, 452.4 152.38" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 449.6 148.43 C 450.43 130.24, 451.77 111.07, 450.07 90.9" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 449.8 148.49 C 450.71 129.75, 449.46 110.64, 450.11 90.94" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 597 88 Q 600 88, 600 91" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 600 149 Q 600 152, 597 152" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 453 152 Q 450 152, 450 149" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 450 91 Q 450 88, 453 88" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <text x="525" y="108.5" text-anchor="middle" font-family='-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' font-size="12.5" font-weight="600" fill="#1f2328">Kafka 4.3 · KRaft</text>
+  <text x="525" y="123.5" text-anchor="middle" font-family='-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' font-size="11" font-weight="400" fill="#57606a">ticks.raw</text>
+  <text x="525" y="138.5" text-anchor="middle" font-family='-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' font-size="11" font-weight="400" fill="#57606a">news.raw</text>
+  <rect x="450" y="236" width="150" height="50" rx="3" fill="#fff0f7"/>
+  <path d="M 453.48 236.2 C 500.53 234.78, 548.18 235.44, 597.11 236.15" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 452.56 235.65 C 500.57 235.67, 548.28 235.06, 596.85 236.57" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 600.21 238.61 C 599.94 253.28, 600.82 267.63, 599.46 282.48" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 600.39 239.22 C 600.02 253.37, 600.67 268.13, 599.43 283.47" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 597.48 286.06 C 549.72 285.8, 501.58 284.45, 453.54 286.18" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 596.49 286.01 C 549.21 285.15, 502.27 286.59, 452.75 285.37" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 450.45 283.01 C 449.05 268.17, 448.52 253.57, 450.1 239.01" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 449.62 283.2 C 450.08 268.74, 451.23 254, 450.38 238.94" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 597 236 Q 600 236, 600 239" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 600 283 Q 600 286, 597 286" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 453 286 Q 450 286, 450 283" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 450 239 Q 450 236, 453 236" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <text x="525" y="257" text-anchor="middle" font-family='-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' font-size="12.5" font-weight="600" fill="#1f2328">ticks.dlq</text>
+  <text x="525" y="272" text-anchor="middle" font-family='-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' font-size="11" font-weight="400" fill="#57606a">unparseable</text>
+  <rect x="655" y="80" width="170" height="80" rx="12" fill="#fff4ed"/>
+  <path d="M 667.01 80.18 C 714.86 81.52, 762.93 78.69, 812.37 80.11" fill="none" stroke="#bc4c00" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 666.84 79.94 C 715.35 80.22, 762.89 80.02, 813.61 80.54" fill="none" stroke="#bc4c00" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 825.64 92.04 C 824.82 110.6, 823.64 128.6, 825.06 147.61" fill="none" stroke="#bc4c00" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 825.48 92.52 C 826.42 110.68, 825.48 128.5, 825.29 147.44" fill="none" stroke="#bc4c00" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 813.42 159.38 C 764.93 158.74, 716.77 160.71, 666.44 160.22" fill="none" stroke="#bc4c00" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 812.97 160.49 C 765.16 160.72, 716.29 160.88, 666.8 159.65" fill="none" stroke="#bc4c00" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 655.36 148.03 C 656.7 129.1, 656.83 111.3, 654.46 91.57" fill="none" stroke="#bc4c00" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 655.59 147.7 C 654.33 129.21, 655.11 111.32, 654.94 92.58" fill="none" stroke="#bc4c00" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 813 80 Q 825 80, 825 92" fill="none" stroke="#bc4c00" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 825 148 Q 825 160, 813 160" fill="none" stroke="#bc4c00" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 667 160 Q 655 160, 655 148" fill="none" stroke="#bc4c00" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 655 92 Q 655 80, 667 80" fill="none" stroke="#bc4c00" stroke-width="1.6" stroke-linecap="round"/>
+  <text x="740" y="108.5" text-anchor="middle" font-family='-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' font-size="12.5" font-weight="600" fill="#1f2328">Flink 2.1 · SQL</text>
+  <text x="740" y="123.5" text-anchor="middle" font-family='-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' font-size="11" font-weight="400" fill="#57606a">event-time windows</text>
+  <text x="740" y="138.5" text-anchor="middle" font-family='-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' font-size="11" font-weight="400" fill="#57606a">watermarks</text>
+  <rect x="880" y="170" width="160" height="74" rx="3" fill="#fff0f7"/>
+  <path d="M 882.71 170.34 C 933.37 169.73, 985.05 171.15, 1036.64 170.39" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 883.34 169.73 C 933.65 171.94, 984.96 168.46, 1036.84 169.71" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 1039.75 173.5 C 1040.55 195.88, 1038.88 217.92, 1039.93 241.17" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 1040.11 172.73 C 1038.68 195.56, 1038.74 217.91, 1039.97 240.81" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 1036.75 244.44 C 986.27 244.7, 935.67 244.11, 882.41 243.64" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 1036.91 243.7 C 986.38 244.94, 935.44 243.62, 882.52 243.83" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 879.43 241.17 C 879.09 218.35, 880.22 195.88, 880.06 173.06" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 879.75 241.56 C 879.39 218.81, 879.55 196.46, 879.61 172.92" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 1037 170 Q 1040 170, 1040 173" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 1040 241 Q 1040 244, 1037 244" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 883 244 Q 880 244, 880 241" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 880 173 Q 880 170, 883 170" fill="none" stroke="#bf3989" stroke-width="1.6" stroke-linecap="round"/>
+  <text x="960" y="195.5" text-anchor="middle" font-family='-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' font-size="12.5" font-weight="600" fill="#1f2328">Kafka · derived</text>
+  <text x="960" y="210.5" text-anchor="middle" font-family='-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' font-size="11" font-weight="400" fill="#57606a">bars · signals</text>
+  <text x="960" y="225.5" text-anchor="middle" font-family='-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' font-size="11" font-weight="400" fill="#57606a">sentiment · late</text>
+  <rect x="880" y="48" width="150" height="54" rx="6" fill="#eefbf1"/>
+  <ellipse cx="955" cy="50" rx="75" ry="10" fill="#eefbf1"/>
+  <path d="M 879.98 49.89 C 878.3 66.41, 878.23 82.64, 880.32 99.51" fill="none" stroke="#1a7f37" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 879.45 50.16 C 878.28 66.57, 879.85 83.24, 879.89 99.66" fill="none" stroke="#1a7f37" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 1030.5 50.03 C 1030.48 66.73, 1031.15 83.39, 1029.6 100.51" fill="none" stroke="#1a7f37" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 1029.57 50.55 C 1028.76 66.42, 1031.43 82.68, 1030.5 100.42" fill="none" stroke="#1a7f37" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 880 50 A 75 10 0 0 1 1030 50" fill="none" stroke="#1a7f37" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 880 50 A 75 10 0 0 0 1030 50" fill="none" stroke="#1a7f37" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 880 100 A 75 10 0 0 0 1030 100" fill="none" stroke="#1a7f37" stroke-width="1.6" stroke-linecap="round"/>
+  <text x="955" y="71" text-anchor="middle" font-family='-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' font-size="12.5" font-weight="600" fill="#1f2328">Iceberg on S3</text>
+  <text x="955" y="86" text-anchor="middle" font-family='-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' font-size="11" font-weight="400" fill="#57606a">history · Parquet</text>
+  <rect x="1055" y="108" width="110" height="64" rx="6" fill="#eefbf1"/>
+  <ellipse cx="1110" cy="110" rx="55" ry="10" fill="#eefbf1"/>
+  <path d="M 1054.55 110.46 C 1055.99 129.69, 1054.75 149.38, 1054.54 170.01" fill="none" stroke="#1a7f37" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 1055.51 110.47 C 1056.21 130.14, 1055.23 149.54, 1054.85 169.46" fill="none" stroke="#1a7f37" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 1165.16 110.48 C 1163.57 129.63, 1166.63 149.22, 1165.21 169.7" fill="none" stroke="#1a7f37" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 1165.55 109.77 C 1166.53 130.08, 1163.83 149.17, 1165.02 170.44" fill="none" stroke="#1a7f37" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 1055 110 A 55 10 0 0 1 1165 110" fill="none" stroke="#1a7f37" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 1055 110 A 55 10 0 0 0 1165 110" fill="none" stroke="#1a7f37" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M 1055 170 A 55 10 0 0 0 1165 170" fill="none" stroke="#1a7f37" stroke-width="1.6" stroke-linecap="round"/>
+  <text x="1110" y="136" text-anchor="middle" font-family='-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' font-size="12.5" font-weight="600" fill="#1f2328">ClickHouse</text>
+  <text x="1110" y="151" text-anchor="middle" font-family='-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif' font-size="11" font-weight="400" fill="#57606a">hot</text>
+</svg>
