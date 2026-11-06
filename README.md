@@ -20,74 +20,86 @@ just api      # → http://localhost:8000
 
 ## Architecture
 
+### The streaming path
+
 ```mermaid
 flowchart LR
-  subgraph SRC["Sources"]
-    CB["Coinbase WS<br/><i>public · keyless · 24/7</i>"]
-    RSS["Crypto news RSS<br/><i>3 feeds</i>"]
-    SEC["SEC EDGAR"]
-    FRED["FRED"]
-  end
+  CB["<b>Coinbase WS</b><br/>public · keyless · 24/7"]
+  RSS["<b>Crypto news RSS</b><br/>3 feeds"]
 
-  subgraph ING["Ingest"]
-    IC["ingest-crypto<br/><i>validate · normalise</i>"]
-    IN["ingest-news<br/><i>tag · score sentiment</i>"]
-    BATCH["batch loaders"]
-  end
+  IC["<b>ingest-crypto</b><br/>validate · normalise"]
+  IN["<b>ingest-news</b><br/>tag · score sentiment"]
 
-  subgraph KAFKA["Apache Kafka 4.3 · KRaft"]
-    T1["ticks.raw"]
-    T2["news.raw"]
-    DLQ["ticks.dlq"]
-  end
+  RAW[["<b>Kafka 4.3 · KRaft</b><br/>ticks.raw · news.raw"]]
+  DLQ["ticks.dlq<br/>unparseable"]
 
-  SR["Schema Registry<br/><i>Avro contracts</i>"]
+  FL["<b>Flink 2.1 SQL</b><br/>event-time windows<br/>watermarks"]
 
-  subgraph FLINK["Apache Flink 2.1 · SQL"]
-    J1["bars 1m / 5m<br/>VWAP"]
-    J2["realized vol<br/>z-score spikes"]
-    J3["sentiment ⨝ price<br/><i>window join</i>"]
-    J4["Iceberg sink"]
-  end
+  DER[["<b>Kafka · derived</b><br/>bars · signals<br/>sentiment · late"]]
 
-  subgraph OUT["Kafka · derived"]
-    B["bars.1m · bars.5m"]
-    S["signals.1m"]
-    SENT["sentiment.5m"]
-    LATE["ticks.late"]
-  end
+  CH[("<b>ClickHouse</b><br/>hot")]
+  ICE[("<b>Iceberg on S3</b><br/>history")]
 
-  subgraph STORE["Storage"]
-    CH[("ClickHouse 26.9<br/><i>hot</i>")]
-    ICE[("Iceberg on S3<br/><i>history · Parquet</i>")]
-  end
+  CB --> IC --> RAW
+  RSS --> IN --> RAW
+  IC -. malformed .-> DLQ
+  RAW --> FL
+  FL --> DER
+  FL --> ICE
+  DER --> CH
+  RAW --> CH
 
-  DBT["dbt<br/><i>staging → marts</i>"]
-  API["FastAPI<br/><i>REST + WebSocket</i>"]
-  UI["Live dashboard"]
-  AF["Airflow 3<br/><i>batch only</i>"]
-
-  CB --> IC --> T1
-  RSS --> IN --> T2
-  SEC & FRED --> BATCH --> CH
-  IC -.malformed.-> DLQ
-
-  SR -.-> IC & IN & FLINK & CH
-
-  T1 --> J1 & J2 & J4
-  T2 --> J3
-  B --> J3
-
-  J1 --> B
-  J2 --> S
-  J3 --> SENT
-  J1 -.late trades.-> LATE
-  J4 --> ICE
-
-  B & S & SENT & LATE & T1 --> CH
-  CH --> DBT --> API --> UI
-  AF --> BATCH & DBT & ICE
+  classDef src fill:#1f2937,stroke:#4b5563,color:#e5e7eb
+  classDef svc fill:#164e63,stroke:#0891b2,color:#e0f2fe
+  classDef bus fill:#1e1b4b,stroke:#6366f1,color:#e0e7ff
+  classDef eng fill:#422006,stroke:#d97706,color:#fef3c7
+  classDef sink fill:#052e16,stroke:#16a34a,color:#dcfce7
+  class CB,RSS src
+  class IC,IN svc
+  class RAW,DER,DLQ bus
+  class FL eng
+  class CH,ICE sink
 ```
+
+### Serving, transformation and orchestration
+
+```mermaid
+flowchart LR
+  CH[("<b>ClickHouse</b>")]
+  DBT["<b>dbt</b><br/>staging → marts<br/>33 tests"]
+  API["<b>FastAPI</b><br/>REST + WebSocket"]
+  UI["<b>Live dashboard</b>"]
+
+  SEC["SEC EDGAR"]
+  FRED["FRED"]
+  BATCH["<b>batch loaders</b>"]
+  AF["<b>Airflow 3</b><br/>batch only"]
+  ICE[("<b>Iceberg</b>")]
+  OBS["<b>Prometheus · Grafana</b><br/><b>Jaeger / OTel</b><br/>5 SLO rules"]
+
+  CH --> DBT --> API --> UI
+  SEC --> BATCH
+  FRED --> BATCH
+  BATCH --> CH
+  AF -. schedules .-> BATCH
+  AF -. schedules .-> DBT
+  AF -. snapshot expiry .-> ICE
+  API -. metrics .-> OBS
+
+  classDef store fill:#052e16,stroke:#16a34a,color:#dcfce7
+  classDef xform fill:#3b0764,stroke:#a855f7,color:#f3e8ff
+  classDef serve fill:#164e63,stroke:#0891b2,color:#e0f2fe
+  classDef orch fill:#422006,stroke:#d97706,color:#fef3c7
+  class CH,ICE store
+  class DBT,BATCH xform
+  class API,UI,OBS serve
+  class AF,SEC,FRED orch
+```
+
+Avro contracts in [`contracts/`](contracts/) are registered with a Schema
+Registry that every producer, every Flink job and every ClickHouse table
+resolves against — it sits behind all three stages rather than inside any one
+of them.
 
 ## The idea that shapes everything: event time
 
@@ -116,7 +128,7 @@ sequenceDiagram
     V->>K: trade @ 10:01:04
     K->>F: watermark passes 10:01:00
     F->>C: emit bar [10:00,10:01) — final
-    Note over C: bar is settled; it will not change
+    Note over C: bar is settled — it will not change
 
     V->>K: trade @ 10:00:45 (arrives late)
     K->>F: event_time < watermark
@@ -138,27 +150,36 @@ comparable.
 ## Data layers
 
 ```mermaid
-flowchart TD
+flowchart LR
   subgraph B["🥉 Bronze — written by the pipeline"]
-    b1["market.ticks"]
-    b2["market.bars"]
-    b3["market.signals"]
-    b4["market.news"]
-    b5["market.sentiment"]
-    b6["market.ticks_late"]
+    direction TB
+    b1["market.ticks · market.bars<br/>market.signals"]
+    b2["market.news · market.sentiment<br/>market.ticks_late"]
   end
   subgraph S["🥈 Silver — dbt views"]
+    direction TB
     s1["stg_ticks<br/><i>late arrivals flagged</i>"]
     s2["stg_bars<br/><i>deduplicated</i>"]
     s3["stg_signals"]
   end
   subgraph G["🥇 Gold — dbt tables"]
+    direction TB
     g1["fct_bars_daily"]
     g2["fct_instrument_liquidity"]
     g3["fct_pipeline_health<br/><i>latency · late rate · errors</i>"]
   end
-  B --> S --> G
-  G --> Q["33 dbt tests<br/><i>incl. OHLC consistency,<br/>VWAP in range, bar grain</i>"]
+  Q["<b>33 dbt tests</b><br/>OHLC consistency · VWAP in range<br/>bar grain · no future trades"]
+
+  B --> S --> G --> Q
+
+  classDef bronze fill:#422006,stroke:#d97706,color:#fef3c7
+  classDef silver fill:#1f2937,stroke:#9ca3af,color:#f3f4f6
+  classDef gold fill:#3b0764,stroke:#a855f7,color:#f3e8ff
+  classDef test fill:#052e16,stroke:#16a34a,color:#dcfce7
+  class b1,b2 bronze
+  class s1,s2,s3 silver
+  class g1,g2,g3 gold
+  class Q test
 ```
 
 `fct_pipeline_health` is the one worth a look: throughput, latency percentiles,
